@@ -7,8 +7,6 @@ import (
 
 	"google.golang.org/api/option"
 	sheets "google.golang.org/api/sheets/v4"
-
-	"github.com/devusSs/steamquery-v2/logging"
 )
 
 type SpreadsheetService struct {
@@ -50,7 +48,6 @@ func (s *SpreadsheetService) GetValuesForCells(
 }
 
 func (s *SpreadsheetService) WriteSingleEntryToTable(cell string, values []interface{}) error {
-	logging.LogWarning("Sleeping 2 seconds to avoid Google timeout")
 	time.Sleep(2 * time.Second)
 
 	var vr sheets.ValueRange
