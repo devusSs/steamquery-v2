@@ -1,0 +1,18 @@
+{
+	"item_list": {
+    "column_letter": "B",
+    "start_number": 6,
+    "end_number": 28
+  },
+  "price_column": "J",
+  "price_total_column": "H",
+  "amount_column": "F",
+  "org_cells": {
+    "last_updated_cell": "G2",
+    "total_value_cell": "F31",
+    "error_cell": "M2",
+    "difference_cell": "F32"
+  },
+  "spread_sheet_id":"1uPl9uj5kQihtIkSJiQ_jgraKi44fH-F41Fx9uvTmYM0",
+  "steam_api_key": "E4F2168D7B34FD3FD0A94732A5230194"
+}

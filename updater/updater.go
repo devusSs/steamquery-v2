@@ -1,0 +1,155 @@
+package updater
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"os"
+	"os/exec"
+	"runtime"
+	"strings"
+
+	"github.com/Masterminds/semver"
+	"github.com/rhysd/go-github-selfupdate/selfupdate"
+
+	"github.com/devusSs/steamquery-v2/types"
+)
+
+const (
+	updateURL = "https://api.github.com/repos/devusSs/steamquery-v2/releases/latest"
+)
+
+var (
+	BuildDate      string
+	BuildMode      string
+	BuildVersion   string
+	buildArch      = runtime.GOARCH
+	buildOS        = runtime.GOOS
+	buildGoVersion = runtime.Version()
+)
+
+func PrintBuildInfo() {
+	fmt.Printf("Build date: \t  %s\n", BuildDate)
+	fmt.Printf("Build mode: \t  %s\n", BuildMode)
+	fmt.Printf("Build version: \t  %s\n", BuildVersion)
+	fmt.Printf("Build OS: \t  %s\n", buildOS)
+	fmt.Printf("Build arch: \t  %s\n", buildArch)
+	fmt.Printf("Build GO version: %s\n", buildGoVersion)
+}
+
+func CheckForUpdatesAndApply() error {
+	updateURL, newVersion, changelog, err := findLatestReleaseURL()
+	if err != nil {
+		return err
+	}
+
+	newVersionAvailable, err := newerVersionAvailable(newVersion)
+	if err != nil {
+		return err
+	}
+
+	if newVersionAvailable {
+		if err := doUpdate(updateURL); err != nil {
+			return err
+		}
+
+		fmt.Printf("Update changelog (%s): %s\n", newVersion, changelog)
+
+		fmt.Println("Update succeeded, restarting app...")
+
+		restartApp()
+	}
+
+	return nil
+}
+
+// Functions which restarts the app with same flags.
+func restartApp() error {
+	cmd := exec.Command(os.Args[0], os.Args[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	os.Exit(0)
+	return nil
+}
+
+// Queries the latest release from Github repo.
+func findLatestReleaseURL() (string, string, string, error) {
+	resp, err := http.Get(updateURL)
+	if err != nil {
+		return "", "", "", err
+	}
+	defer resp.Body.Close()
+
+	var release types.GithubRelease
+
+	err = json.NewDecoder(resp.Body).Decode(&release)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	// Fix versions / architecture to match Github releases.
+	if buildArch == "amd64" {
+		buildArch = "x86_64"
+	}
+
+	if buildArch == "386" {
+		buildArch = "i386"
+	}
+
+	// Find matching release for our OS & architecture.
+	for _, asset := range release.Assets {
+		releaseName := strings.ToLower(asset.Name)
+
+		if strings.Contains(releaseName, buildArch) && strings.Contains(releaseName, buildOS) {
+			// Format the changelog body accordingly.
+			changeSplit := strings.Split(
+				strings.ReplaceAll(strings.TrimSpace(release.Body), "## Changelog", ""),
+				"\n",
+			)
+			for i, line := range changeSplit {
+				changeSplit[i] = strings.ReplaceAll(fmt.Sprintf("\t\t\t%s", line), "*", "-")
+			}
+			changelog := strings.Join(changeSplit, "\n")
+			return asset.BrowserDownloadURL, release.TagName, changelog, nil
+		}
+	}
+
+	return "", "", "", errors.New("no matching release found")
+}
+
+// Compare current version with latest version
+func newerVersionAvailable(newVersion string) (bool, error) {
+	currentBuild := strings.ReplaceAll(BuildVersion, "v", "")
+	newBuild := strings.ReplaceAll(newVersion, "v", "")
+
+	vOld, err := semver.NewVersion(currentBuild)
+	if err != nil {
+		return false, err
+	}
+
+	vNew, err := semver.NewVersion(newBuild)
+	if err != nil {
+		return false, err
+	}
+
+	return !vNew.Equal(vOld), nil
+}
+
+// Perform the actual patch.
+func doUpdate(url string) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	if err := selfupdate.UpdateTo(url, exe); err != nil {
+		return err
+	}
+
+	return nil
+}
