@@ -48,7 +48,7 @@ func (s *SpreadsheetService) GetValuesForCells(
 }
 
 func (s *SpreadsheetService) WriteSingleEntryToTable(cell string, values []interface{}) error {
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	var vr sheets.ValueRange
 	vr.Values = append(vr.Values, values)
