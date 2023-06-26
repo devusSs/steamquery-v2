@@ -1,0 +1,31 @@
+name: golangci-lint
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  golangci:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    strategy:
+      matrix:
+        go: [1.20.5, 1.20.4]
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    name: lint
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go }}
+          cache: false
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          working-directory: .
+          args: --timeout=5m
