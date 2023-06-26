@@ -9,6 +9,7 @@ publish.sh
 tmp/
 testing/
 .goreleaser.yaml
+.pre-commit-config.yaml
 TODOS.txt
 
 .vscode/*
