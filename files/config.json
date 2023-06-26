@@ -1,0 +1,18 @@
+{
+	"item_list": {
+    "column_letter": "C",
+    "start_number": 5,
+    "end_number": 40
+  },
+  "price_column": "M",
+  "price_total_column": "H",
+  "amount_column": "F",
+  "org_cells": {
+    "last_updated_cell": "F1",
+    "total_value_cell": "G1",
+    "error_cell": "H1",
+    "difference_cell": "I1"
+  },
+  "spread_sheet_id":"",
+  "steam_api_key": ""
+}
