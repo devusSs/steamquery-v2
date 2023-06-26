@@ -36,9 +36,9 @@ build:
 	@[ "${STEAMQUERY_BUILD_MODE}" ] || ( echo "STEAMQUERY_BUILD_MODE is not set"; exit 1 )
 	@echo "Building app for Windows (AMD64), Linux (AMD64) & MacOS (ARM64)..."
 	@go mod tidy
-	@GOOS=windows GOARCH=amd64 go build -ldflags="-X 'github.com/devusSs/steamquery-v2/updater.BuildVersion=$(BUILD_VERSION)' -X 'github.com/devusSs/steamquery-v2/updater.BuildDate=${shell date}' -X 'github.com/devusSs/steamquery-v2/updater.BuildMode=$(BUILD_MODE)'" -o release/steamquery_windows_amd64/ ./...
-	@GOOS=linux GOARCH=amd64 go build -ldflags="-X 'github.com/devusSs/steamquery-v2/updater.BuildVersion=$(BUILD_VERSION)' -X 'github.com/devusSs/steamquery-v2/updater.BuildDate=${shell date}' -X 'github.com/devusSs/steamquery-v2/updater.BuildMode=$(BUILD_MODE)'" -o release/steamquery_linux_amd64/ ./...
-	@GOOS=darwin GOARCH=arm64 go build -ldflags="-X 'github.com/devusSs/steamquery-v2/updater.BuildVersion=$(BUILD_VERSION)' -X 'github.com/devusSs/steamquery-v2/updater.BuildDate=${shell date}' -X 'github.com/devusSs/steamquery-v2/updater.BuildMode=$(BUILD_MODE)'" -o release/steamquery_darwin_arm64/ ./...
+	@GOOS=windows GOARCH=amd64 go build -ldflags="-X 'github.com/devusSs/steamquery-v2/updater.BuildVersion=$(BUILD_VERSION)' -X 'github.com/devusSs/steamquery/updater.BuildDate=${shell date}' -X 'github.com/devusSs/steamquery-v2/updater.BuildMode=$(BUILD_MODE)'" -o release/steamquery_windows_amd64/ ./...
+	@GOOS=linux GOARCH=amd64 go build -ldflags="-X 'github.com/devusSs/steamquery-v2/updater.BuildVersion=$(BUILD_VERSION)' -X 'github.com/devusSs/steamquery/updater.BuildDate=${shell date}' -X 'github.com/devusSs/steamquery-v2/updater.BuildMode=$(BUILD_MODE)'" -o release/steamquery_linux_amd64/ ./...
+	@GOOS=darwin GOARCH=arm64 go build -ldflags="-X 'github.com/devusSs/steamquery-v2/updater.BuildVersion=$(BUILD_VERSION)' -X 'github.com/devusSs/steamquery/updater.BuildDate=${shell date}' -X 'github.com/devusSs/steamquery-v2/updater.BuildMode=$(BUILD_MODE)'" -o release/steamquery_darwin_arm64/ ./...
 	@echo "Done building app"
 
 # DO NOT CHANGE.
@@ -85,5 +85,5 @@ analysis: build
 clean:
 	@clear
 	@rm -rf ./logs
-	@rm -rf ./release 
+	@rm -rf ./release
 	@rm -rf ./testing

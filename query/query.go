@@ -272,6 +272,7 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 
 	for item := range items {
 		if getCount == 20 {
+			getCount = 0
 			logging.LogWarning("Sleeping 1 minute to avoid Steam timeout")
 			time.Sleep(1 * time.Minute)
 		}
