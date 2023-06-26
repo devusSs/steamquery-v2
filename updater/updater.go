@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"runtime"
 	"strings"
 
@@ -56,24 +55,11 @@ func CheckForUpdatesAndApply() error {
 
 		fmt.Printf("Update changelog (%s): %s\n", newVersion, changelog)
 
-		fmt.Println("Update succeeded, restarting app...")
+		fmt.Println("Update succeeded, please restart the app")
 
-		restartApp()
+		os.Exit(0)
 	}
 
-	return nil
-}
-
-// Functions which restarts the app with same flags.
-func restartApp() error {
-	cmd := exec.Command(os.Args[0], os.Args[1:]...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	os.Exit(0)
 	return nil
 }
 

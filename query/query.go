@@ -570,7 +570,7 @@ func updateTotalValue(totalPrices map[int]string) error {
 func updateDifferenceCell(preRunTotal string) error {
 	logging.LogWarning("Updating difference cell, please wait")
 
-	difference := 0.00
+	var difference float64
 
 	preRunTotal = checkAndReplaceDotInPrice(preRunTotal)
 	preRunTotal = strings.Replace(preRunTotal, "€", "", 1)
@@ -657,9 +657,7 @@ func writeLastUpdatedCell() error {
 
 // Helper function that checks for an already existing "." in a price and replaces it.
 func checkAndReplaceDotInPrice(price string) string {
-	if strings.Contains(price, ".") {
-		price = strings.Replace(price, ".", "", 1)
-	}
+	price = strings.Replace(price, ".", "", 1)
 
 	return price
 }

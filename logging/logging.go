@@ -68,25 +68,45 @@ func LogInfo(message string) {
 		consoleLogger.Printf("%s %s\n", InfSign, message)
 	}
 
-	appLogFile.Write([]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), InfSign, message)))
+	_, err := appLogFile.Write(
+		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), InfSign, message)),
+	)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func LogWarning(message string) {
 	consoleLogger.Printf("%s %s\n", WarnSign, message)
 
-	appLogFile.Write([]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), WarnSign, message)))
+	_, err := appLogFile.Write(
+		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), WarnSign, message)),
+	)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func LogError(message string) {
 	consoleLogger.Printf("%s [non-critical] %s\n", ErrSign, message)
 
-	errorLogFile.Write([]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), ErrSign, message)))
+	_, err := errorLogFile.Write(
+		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), ErrSign, message)),
+	)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func LogFatal(message string) {
 	consoleLogger.Printf("%s [critical] %s\n", ErrSign, message)
 
-	errorLogFile.Write([]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), ErrSign, message)))
+	_, err := errorLogFile.Write(
+		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), ErrSign, message)),
+	)
+	if err != nil {
+		log.Println(err)
+	}
 
 	os.Exit(1)
 }
@@ -94,5 +114,10 @@ func LogFatal(message string) {
 func LogSuccess(message string) {
 	consoleLogger.Printf("%s %s\n", SucSign, message)
 
-	appLogFile.Write([]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), SucSign, message)))
+	_, err := appLogFile.Write(
+		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), SucSign, message)),
+	)
+	if err != nil {
+		log.Println(err)
+	}
 }

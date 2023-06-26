@@ -1,0 +1,31 @@
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-added-large-files
+
+- repo: local
+  hooks:
+    - id: go-fmt
+      name: format Go code
+      language: system
+      entry: bash -c "exec go fmt ./..."
+    - id: go-vet
+      name: vet Go code
+      language: system
+      entry: bash -c "exec go vet ./..."
+    - id: golangci-lint
+      name: lint Go code
+      language: system
+      entry: bash -c "exec golangci-lint run ./..."
+    - id: go-critic
+      name: critic Go lang static analysis
+      language: system
+      entry: bash -c "exec gocritic check ./..."
+    - id: go-mod-tidy
+      name: clean up Go mod files
+      language: system
+      entry: bash -c "exec go mod tidy"
