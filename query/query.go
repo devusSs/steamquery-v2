@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	_ "time/tzdata"
 
 	"github.com/devusSs/steamquery-v2/config"
 	"github.com/devusSs/steamquery-v2/logging"
