@@ -331,6 +331,8 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 
 	logging.LogSuccess(fmt.Sprintf("Successfully fetched %d item(s)", len(items)))
 
+	logging.LogInfo(fmt.Sprintf("PRICE MAP PRE WRITING: %v", priceMap))
+
 	return priceMap, nil
 }
 
