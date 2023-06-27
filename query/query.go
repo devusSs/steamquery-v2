@@ -423,6 +423,9 @@ func calculateValueItemAmount(
 		return nil, err
 	}
 
+	logging.LogInfo(fmt.Sprintf("AMOUNT LIST: %v\n", amountList))
+	logging.LogInfo(fmt.Sprintf("PRICE LIST: %v\n", pricePerItemMap))
+
 	returnMap := make(map[int]string)
 
 	// Map the cell number in amount list to cell number in priceperitemmap.
@@ -433,10 +436,12 @@ func calculateValueItemAmount(
 
 		price, ok := pricePerItemMap[cell]
 		if !ok {
+			logging.LogInfo(fmt.Sprintf("missing key price map: CELL %d", cell))
 			return nil, errors.New("missing key in price map")
 		}
 
 		if price == "" {
+			logging.LogInfo(fmt.Sprintf("price is empty for cell %d", cell))
 			return nil, errors.New("missing key in price map")
 		}
 
