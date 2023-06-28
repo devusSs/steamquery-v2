@@ -20,10 +20,6 @@ import (
 	"github.com/devusSs/steamquery-v2/types"
 )
 
-const (
-	baseURL = "https://steamcommunity.com/market/priceoverview/?appid=730&currency=3&market_hash_name="
-)
-
 var (
 	usingBeta      bool
 	skipCellChecks bool
@@ -351,23 +347,21 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 			time.Sleep(1 * time.Minute)
 		}
 
-		logging.LogDebug(fmt.Sprintf("Fetching price for %s", item))
+		logging.LogDebug(fmt.Sprintf("Fetching price for \t\t%s", item))
 
-		req, err := http.NewRequest(
-			http.MethodGet,
-			fmt.Sprintf("%s%s", baseURL, url.PathEscape(item)),
-			nil,
-		)
+		u := "https://steamcommunity.com/market/priceoverview/?" + url.Values{
+			"appid":            {strconv.FormatUint(730, 10)},
+			"country":          {"EN"},
+			"currency":         {"3"},
+			"market_hash_name": {item},
+		}.Encode()
+
+		req, err := http.NewRequest(http.MethodGet, u, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		// Pretend we are a legitimate browser accessing the Steam market to prevent potential blocks.
-		req.Header.Add(
-			"User-Agent",
-			system.GetUserAgentHeaderFromOS(),
-		)
-		req.Header.Add("Accept", "application/json")
+		req.Header.Set("User-Agent", system.GetUserAgentHeaderFromOS())
 
 		res, err := httpClient.Do(req)
 		if err != nil {
