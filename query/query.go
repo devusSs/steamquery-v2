@@ -406,6 +406,16 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 			return nil, err
 		}
 
+		// Replace price with 0 when item has no active listing on Steam market.
+		if !itemMarketResponse.Success {
+			logging.LogWarning(fmt.Sprintf("No Steam market listing for item %s", item))
+			priceMap[item] = "0,00€"
+			getCount++
+			itemsFetched++
+			logging.LogDebug(fmt.Sprintf("Done fetching price for: \t%s", item))
+			continue
+		}
+
 		priceMap[item] = strings.ReplaceAll(itemMarketResponse.LowestPrice, "-", "")
 
 		getCount++

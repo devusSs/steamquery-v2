@@ -77,7 +77,7 @@ version: build
 	@rm -rf ./testing
 	@mkdir ./testing
 	@cp ./release/steamquery_$(BUILD_OS)_$(BUILD_ARCH)/steamquery ./testing
-	@cd ./testing && ./steamquery -v
+	@cd ./testing && ./steamquery -v -du
 
 
 # DO NOT CHANGE.
