@@ -25,6 +25,7 @@ func main() {
 	logDirFlag := flag.String("l", "./logs", "sets the logging directory")
 	disableUpdatesFlag := flag.Bool("du", false, "disables update check on startup")
 	analysisModeFlag := flag.Bool("a", false, "runs the app in analysis mode and exits")
+	skipChecks := flag.Bool("sc", false, "skips last updated and error cell checks on sheets")
 	flag.Parse()
 
 	if *analysisModeFlag {
@@ -38,6 +39,10 @@ func main() {
 		if err := updater.CheckForUpdatesAndApply(); err != nil {
 			log.Fatalf("Error checking for updates: %s\n", err.Error())
 		}
+	}
+
+	if err := updater.CheckMinVersion(); err != nil {
+		log.Fatal(err)
 	}
 
 	system.InitClearFunc()
@@ -101,6 +106,7 @@ func main() {
 		cfg.AmountColumn,
 		cfg.OrgCells,
 		cfg.SteamAPIKey,
+		*skipChecks,
 	)
 
 	if err := query.RunQuery(); err != nil {
@@ -123,7 +129,7 @@ func main() {
 
 	logging.LogSuccess("Done, exiting app now")
 
-	logging.LogInfo(
+	logging.LogDebug(
 		fmt.Sprintf("Programm execution took %.2f second(s)", time.Since(startTime).Seconds()),
 	)
 

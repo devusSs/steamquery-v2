@@ -3,7 +3,7 @@ package tables
 import (
 	"context"
 	"fmt"
-	"time"
+	"sort"
 
 	"google.golang.org/api/option"
 	sheets "google.golang.org/api/sheets/v4"
@@ -48,12 +48,43 @@ func (s *SpreadsheetService) GetValuesForCells(
 }
 
 func (s *SpreadsheetService) WriteSingleEntryToTable(cell string, values []interface{}) error {
-	time.Sleep(1 * time.Second)
-
 	var vr sheets.ValueRange
 	vr.Values = append(vr.Values, values)
 
 	_, err := s.service.Spreadsheets.Values.Update(s.spreadsheetID, cell, &vr).
+		ValueInputOption("USER_ENTERED").
+		Do()
+
+	return err
+}
+
+func (s *SpreadsheetService) WriteMultipleEntriesToTable(
+	inputMap map[int]string,
+	column string,
+) error {
+	var keys []int
+	for key := range inputMap {
+		keys = append(keys, key)
+	}
+	sort.Ints(keys)
+
+	var values [][]interface{}
+
+	for _, key := range keys {
+		values = append(values, []interface{}{inputMap[key]})
+	}
+
+	valueRange := &sheets.ValueRange{
+		Values: values,
+	}
+
+	cellRange := fmt.Sprintf(
+		"%s:%s",
+		fmt.Sprintf("%s%d", column, keys[0]),
+		fmt.Sprintf("%s%d", column, keys[len(keys)-1]),
+	)
+
+	_, err := s.service.Spreadsheets.Values.Update(s.spreadsheetID, cellRange, valueRange).
 		ValueInputOption("USER_ENTERED").
 		Do()
 

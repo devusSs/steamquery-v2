@@ -15,6 +15,7 @@ import (
 	"github.com/devusSs/steamquery-v2/config"
 	"github.com/devusSs/steamquery-v2/logging"
 	"github.com/devusSs/steamquery-v2/steam"
+	"github.com/devusSs/steamquery-v2/system"
 	"github.com/devusSs/steamquery-v2/tables"
 	"github.com/devusSs/steamquery-v2/types"
 )
@@ -24,6 +25,8 @@ const (
 )
 
 var (
+	skipCellChecks bool
+
 	spreadsheets *tables.SpreadsheetService
 
 	itemColumnLetter string
@@ -50,7 +53,16 @@ func InitQuery(
 	amountColumn string,
 	orgCells config.OrgCells,
 	steamAPIKeyConfig string,
+	skipChecks bool,
 ) {
+	if skipChecks {
+		logging.LogWarning(
+			"Skip checks flag specified, skipping last updated and error cell check on sheets",
+		)
+	}
+
+	skipCellChecks = skipChecks
+
 	spreadsheets = service
 
 	itemColumnLetter = itemList.ColumnLetter
@@ -81,25 +93,27 @@ func RunQuery() error {
 
 	logging.LogSuccess("Steam is up, proceeding")
 
-	lastUpdatedString, err := getLastUpdatedCellValue()
-	if err != nil {
-		return err
-	}
-
-	if lastUpdatedString != "" {
-		if err := compareLastUpdatedCell(lastUpdatedString); err != nil {
+	if !skipCellChecks {
+		lastUpdatedString, err := getLastUpdatedCellValue()
+		if err != nil {
 			return err
 		}
-	}
 
-	lastErrorTimestamp, err := getLastErrorTimestamp()
-	if err != nil {
-		return err
-	}
+		if lastUpdatedString != "" {
+			if err := compareLastUpdatedCell(lastUpdatedString); err != nil {
+				return err
+			}
+		}
 
-	if !lastErrorTimestamp.IsZero() {
-		if err := compareLastErrorTimestamp(lastErrorTimestamp); err != nil {
+		lastErrorTimestamp, err := getLastErrorTimestamp()
+		if err != nil {
 			return err
+		}
+
+		if !lastErrorTimestamp.IsZero() {
+			if err := compareLastErrorTimestamp(lastErrorTimestamp); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -167,7 +181,7 @@ func WriteErrorCell(err error) error {
 }
 
 func WriteNoErrorCell() error {
-	logging.LogWarning("Writing error cell, please wait")
+	logging.LogInfo("Writing error cell, please wait")
 
 	var values []interface{}
 	values = append(values, "No error occured.")
@@ -233,7 +247,7 @@ func compareLastUpdatedCell(lastUpdated string) error {
 
 // Function maps item names to their cell number (only number no letter).
 func getItemNamesFromSheets() (map[string]int, error) {
-	logging.LogWarning("Fetching item names, please wait")
+	logging.LogInfo("Fetching item names, please wait")
 
 	values, err := spreadsheets.GetValuesForCells(
 		fmt.Sprintf("%s%d", itemColumnLetter, itemStartNumber),
@@ -255,26 +269,61 @@ func getItemNamesFromSheets() (map[string]int, error) {
 		if value != "" {
 			returnMap[value] = cellNumber
 		}
+		if value == "" {
+			returnMap[fmt.Sprintf("empty_cell_%d", cellNumber)] = cellNumber
+		}
 		cellNumber++
 	}
+
+	logging.LogDebug(fmt.Sprintf("Item names from sheets map: %v", returnMap))
+
+	logging.LogSuccess("Successfully fetched item names")
 
 	return returnMap, nil
 }
 
 // Function gets the market price for each item in item map.
 func getItemMarketValues(items map[string]int) (map[string]string, error) {
-	logging.LogWarning(
+	logging.LogInfo(
 		"Fetching prices now, this might take a moment. The program WILL print something once it is done",
 	)
+
+	logging.LogWarning("Please DO NOT use Steam anywhere on your network for that time")
 
 	httpClient := http.Client{Timeout: 3 * time.Second}
 	priceMap := make(map[string]string)
 	getCount := 0
+	itemsFetched := 0
+	sleepCount := 0
+	sleepCountMax := 0
+	actualItemLen := 0
 
 	for item := range items {
+		if strings.Contains(item, "empty_cell") {
+			continue
+		}
+		actualItemLen++
+	}
+
+	sleepCountMax = int(actualItemLen / 20)
+
+	for item := range items {
+		if strings.Contains(item, "empty_cell") {
+			continue
+		}
+
+		item = strings.TrimSpace(item)
+
 		if getCount == 20 {
 			getCount = 0
-			logging.LogWarning("Sleeping 1 minute to avoid Steam timeout")
+			sleepCount++
+			logging.LogInfo(
+				fmt.Sprintf(
+					"Sleeping 1 minute to avoid Steam timeout (%d/%d sleep(s))",
+					sleepCount,
+					sleepCountMax,
+				),
+			)
 			time.Sleep(1 * time.Minute)
 		}
 
@@ -290,8 +339,9 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 		// Pretend we are a legitimate browser accessing the Steam market to prevent potential blocks.
 		req.Header.Add(
 			"User-Agent",
-			"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
+			system.GetUserAgentHeaderFromOS(),
 		)
+		req.Header.Add("Accept", "application/json")
 
 		res, err := httpClient.Do(req)
 		if err != nil {
@@ -302,6 +352,22 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 		if res.StatusCode != http.StatusOK {
 			if res.StatusCode == http.StatusTooManyRequests {
 				logging.LogError("Got timeouted by Steam, wait at least 1 minute or change IP")
+			}
+
+			if res.StatusCode == http.StatusInternalServerError {
+				logging.LogError(
+					fmt.Sprintf("Could not find item on Steam community market: %s", item),
+				)
+
+				logging.LogWarning(
+					fmt.Sprintf("Proceeding with list, setting item price for %s to 0,00€", item),
+				)
+
+				priceMap[item] = "0,00€"
+
+				getCount++
+
+				continue
 			}
 
 			return nil, fmt.Errorf(
@@ -326,41 +392,42 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 
 		getCount++
 
-		logging.LogInfo(fmt.Sprintf("[FETCH] Done with: \t%s", item))
+		itemsFetched++
+
+		logging.LogDebug(fmt.Sprintf("Done fetching price for: \t%s", item))
 	}
 
-	logging.LogSuccess(fmt.Sprintf("Successfully fetched %d item(s)", len(items)))
+	logging.LogDebug(fmt.Sprintf("Item prices post fetch: %v", priceMap))
 
-	logging.LogInfo(fmt.Sprintf("PRICE MAP PRE WRITING: %v", priceMap))
+	logging.LogSuccess(fmt.Sprintf("Successfully fetched %d item price(s)", itemsFetched))
 
 	return priceMap, nil
 }
 
 // Function writes the lowest market price to the corresponding price cell.
 func writePricesForItemMap(itemList map[string]int, priceList map[string]string) error {
-	logging.LogWarning("Writing prices to sheets now, please wait")
+	logging.LogInfo("Writing prices to sheets now, please wait")
+
+	priceMap := make(map[int]string)
 
 	for item, cellNumber := range itemList {
-		if item == "" {
+		if strings.Contains(item, "empty_cell") {
+			priceMap[cellNumber] = ""
 			continue
 		}
 
 		price, ok := priceList[item]
 		if !ok {
-			return fmt.Errorf("missing item %s in pricelist", item)
+			return fmt.Errorf("missing item %s in priceList", item)
 		}
 
-		var values []interface{}
-		values = append(values, price)
+		priceMap[cellNumber] = price
+	}
 
-		if err := spreadsheets.WriteSingleEntryToTable(
-			fmt.Sprintf("%s%d", priceColumnLetter, cellNumber),
-			values,
-		); err != nil {
-			return err
-		}
+	logging.LogDebug(fmt.Sprintf("Price map pre write: %v", priceMap))
 
-		logging.LogInfo(fmt.Sprintf("[WRITE] Done writing price for: \t%s", item))
+	if err := spreadsheets.WriteMultipleEntriesToTable(priceMap, priceColumnLetter); err != nil {
+		return err
 	}
 
 	logging.LogSuccess(fmt.Sprintf("Successfully wrote %d price(s) to sheets", len(priceList)))
@@ -369,7 +436,7 @@ func writePricesForItemMap(itemList map[string]int, priceList map[string]string)
 }
 
 func getItemAmountCells() (map[int]int, error) {
-	logging.LogWarning("Getting item amounts, please wait")
+	logging.LogInfo("Getting item amounts, please wait")
 
 	startCell := itemStartNumber
 	endCell := itemEndNumber
@@ -411,6 +478,8 @@ func getItemAmountCells() (map[int]int, error) {
 		currentCell++
 	}
 
+	logging.LogSuccess("Successfully got item amounts")
+
 	return returnMap, nil
 }
 
@@ -418,32 +487,30 @@ func getItemAmountCells() (map[int]int, error) {
 func calculateValueItemAmount(
 	amountList map[int]int,
 ) (map[int]string, error) {
-	logging.LogWarning("Calculating item prices * amount, please wait")
+	logging.LogInfo("Calculating item prices * amount, please wait")
 
 	pricePerItemMap, err := fetchPricePerItem()
 	if err != nil {
 		return nil, err
 	}
 
-	logging.LogInfo(fmt.Sprintf("AMOUNT LIST: %v\n", amountList))
-	logging.LogInfo(fmt.Sprintf("PRICE LIST: %v\n", pricePerItemMap))
-
 	returnMap := make(map[int]string)
 
 	// Map the cell number in amount list to cell number in priceperitemmap.
 	for cell, amount := range amountList {
 		if amount == 0 {
+			returnMap[cell] = ""
 			continue
 		}
 
 		price, ok := pricePerItemMap[cell]
 		if !ok {
-			logging.LogInfo(fmt.Sprintf("missing key price map: CELL %d", cell))
+			logging.LogWarning(fmt.Sprintf("missing key price map: CELL %d", cell))
 			return nil, errors.New("missing key in price map")
 		}
 
 		if price == "" {
-			logging.LogInfo(fmt.Sprintf("price is empty for cell %d", cell))
+			logging.LogWarning(fmt.Sprintf("price is empty for cell %d", cell))
 			return nil, errors.New("missing key in price map")
 		}
 
@@ -462,6 +529,8 @@ func calculateValueItemAmount(
 
 		returnMap[cell] = priceTotalStr
 	}
+
+	logging.LogDebug(fmt.Sprintf("TOTAL VALUE MAP: %v", returnMap))
 
 	return returnMap, nil
 }
@@ -489,25 +558,17 @@ func fetchPricePerItem() (map[int]string, error) {
 		currentCell++
 	}
 
+	logging.LogDebug(fmt.Sprintf("PRICE PER ITEM MAP: %v", returnMap))
+
 	return returnMap, nil
 }
 
 // Function writes the total prices to each cell.
 func writeTotalPrices(totalPrices map[int]string) error {
-	logging.LogWarning("Writing total prices (amounts), please wait")
+	logging.LogInfo("Writing total prices (amounts), please wait")
 
-	for cell, price := range totalPrices {
-		var values []interface{}
-
-		values = append(values, price)
-
-		if err := spreadsheets.WriteSingleEntryToTable(fmt.Sprintf("%s%d", priceTotalColumnLetter, cell), values); err != nil {
-			return err
-		}
-
-		logging.LogInfo(
-			fmt.Sprintf("Done writing price to cell %s%d", priceTotalColumnLetter, cell),
-		)
+	if err := spreadsheets.WriteMultipleEntriesToTable(totalPrices, priceTotalColumnLetter); err != nil {
+		return err
 	}
 
 	logging.LogSuccess("Successfully wrote total prices")
@@ -517,7 +578,7 @@ func writeTotalPrices(totalPrices map[int]string) error {
 
 // Function gets total (overall) value from sheets.
 func getOverallValue() (string, error) {
-	logging.LogWarning("Getting overall value pre run, please wait")
+	logging.LogInfo("Getting overall value pre run, please wait")
 
 	values, err := spreadsheets.GetValuesForCells(totalValueCell, totalValueCell)
 	if err != nil {
@@ -528,7 +589,7 @@ func getOverallValue() (string, error) {
 
 	if len(values.Values) == 0 {
 		value = "0,00€"
-		logging.LogSuccess("Successfully fetched initial over value pre run")
+		logging.LogSuccess("Successfully fetched initial overall value pre run")
 		return value, nil
 	}
 
@@ -544,11 +605,15 @@ func getOverallValue() (string, error) {
 
 // Function calculates total value for items and adds it to cell.
 func updateTotalValue(totalPrices map[int]string) error {
-	logging.LogWarning("Updating total value cell, please wait")
+	logging.LogInfo("Updating total value cell, please wait")
 
 	totalValue := 0.00
 
 	for _, price := range totalPrices {
+		if price == "" {
+			continue
+		}
+
 		price = strings.Replace(price, ",", ".", 1)
 		price = strings.Replace(price, "€", "", 1)
 
@@ -577,7 +642,7 @@ func updateTotalValue(totalPrices map[int]string) error {
 
 // Function calculates and updates the difference compared to last run.
 func updateDifferenceCell(preRunTotal string) error {
-	logging.LogWarning("Updating difference cell, please wait")
+	logging.LogInfo("Updating difference cell, please wait")
 
 	var difference float64
 
@@ -649,7 +714,7 @@ func getTotalValueCell() (float64, error) {
 
 // Function which updates last updated cell on sheet.
 func writeLastUpdatedCell() error {
-	logging.LogWarning("Writing last updated cell, please wait")
+	logging.LogInfo("Writing last updated cell, please wait")
 
 	var values []interface{}
 
@@ -673,7 +738,7 @@ func checkAndReplaceDotInPrice(price string) string {
 
 // Helper function which queries the last error timestamp and returns it for analysis.
 func getLastErrorTimestamp() (time.Time, error) {
-	logging.LogWarning("Getting last error timestamp cell, please wait")
+	logging.LogInfo("Getting last error timestamp cell, please wait")
 
 	values, err := spreadsheets.GetValuesForCells(errorCell, errorCell)
 	if err != nil {
@@ -710,7 +775,7 @@ func getLastErrorTimestamp() (time.Time, error) {
 		errorTimestamp = timeObj
 	}
 
-	logging.LogWarning("Successfully got last error timestamp")
+	logging.LogSuccess("Successfully got last error timestamp")
 
 	return errorTimestamp, nil
 }

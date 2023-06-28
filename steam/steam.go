@@ -21,7 +21,7 @@ const (
 
 // Actual check on the Steam API for status of CSGO servers.
 func IsSteamCSGOAPIUp(apiKey string) (bool, error) {
-	logging.LogWarning("Fetching Steam API status, please wait")
+	logging.LogInfo("Fetching Steam API status, please wait")
 
 	res, err := http.Get(fmt.Sprintf("%s%s", statusAPIURL, apiKey))
 	if err != nil {
@@ -52,6 +52,7 @@ func IsSteamCSGOAPIUp(apiKey string) (bool, error) {
 		steamStatusSessions = steamNormal
 	case "delayed":
 		steamStatusSessions = steamDelayed
+		logging.LogWarning("Steam sessions logon delayed, expect problems")
 	default:
 		steamStatusSessions = steamDown
 	}
@@ -62,6 +63,7 @@ func IsSteamCSGOAPIUp(apiKey string) (bool, error) {
 		steamStatusCommunity = steamNormal
 	case "delayed":
 		steamStatusCommunity = steamDelayed
+		logging.LogWarning("Steam community delayed, expect problems")
 	default:
 		steamStatusCommunity = steamDown
 	}

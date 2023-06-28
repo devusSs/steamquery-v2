@@ -13,10 +13,11 @@ import (
 var (
 	consoleLogger *log.Logger
 
-	InfSign  = color.CyanString("[INFO]")
-	WarnSign = color.YellowString("[WARN]")
-	ErrSign  = color.RedString("[ERROR]")
-	SucSign  = color.GreenString("[SUCCESS]")
+	DebugSign = color.WhiteString("[DEBUG]")
+	InfSign   = color.CyanString("[INFO]")
+	WarnSign  = color.YellowString("[WARN]")
+	ErrSign   = color.RedString("[ERROR]")
+	SucSign   = color.GreenString("[SUCCESS]")
 
 	logLevel      string
 	logsDirectory string
@@ -63,10 +64,20 @@ func CloseLogFiles() error {
 	return errorLogFile.Close()
 }
 
-func LogInfo(message string) {
+func LogDebug(message string) {
 	if logLevel != "release" {
-		consoleLogger.Printf("%s %s\n", InfSign, message)
+		consoleLogger.Printf("%s %s\n", DebugSign, message)
 	}
+	_, err := appLogFile.Write(
+		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), InfSign, message)),
+	)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func LogInfo(message string) {
+	consoleLogger.Printf("%s %s\n", InfSign, message)
 
 	_, err := appLogFile.Write(
 		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), InfSign, message)),

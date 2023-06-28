@@ -11,7 +11,7 @@ If there is any issues involving copyright, ownership or any related issues (for
 
 ## Why is this program called SteamQuery v2 and how do I use it?
 
-There used to be a version one of this pogram. That program however had a lot of perhaps unfixable bugs due to the structure of the code.<br/>
+There used to be a version one of this program. That program however had a lot of perhaps unfixable bugs due to the structure of the code.<br/>
 Therefor a new version of this program was created focussing on performance and clean code as well as usability.<br/>
 
 This program makes it possible for you to keep track of certain [CSGO](https://www.counter-strike.net/) skins and items in your [Steam](https://steamcommunity.com/) inventory.<br/>
@@ -64,6 +64,7 @@ If you ever need more configuration options simply set them via flags:
 -du to disable update checks
 -v  to print build information
 -a  to run the app in analysis mode (checks for potential errors)
+-sc to skip checks regarding last updated and error cell on Google Sheets
 ```
 
 ## Why does this program need my Steam API key?

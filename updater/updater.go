@@ -63,6 +63,29 @@ func CheckForUpdatesAndApply() error {
 	return nil
 }
 
+// Minimum version increased to v1.0.8 due to major fixes.
+func CheckMinVersion() error {
+	currentVersion, err := semver.NewVersion(BuildVersion)
+	if err != nil {
+		return err
+	}
+
+	minVersion, err := semver.NewVersion("v1.0.8")
+	if err != nil {
+		return err
+	}
+
+	if currentVersion.LessThan(minVersion) {
+		return fmt.Errorf(
+			"unsupported version (%s), please update to at least (%s)",
+			BuildVersion,
+			"v1.0.8",
+		)
+	}
+
+	return nil
+}
+
 // Queries the latest release from Github repo.
 func findLatestReleaseURL() (string, string, string, error) {
 	resp, err := http.Get(updateURL)
