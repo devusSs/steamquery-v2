@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/Masterminds/semver v1.5.0
+	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
 	github.com/fatih/color v1.15.0
 	github.com/rhysd/go-github-selfupdate v1.2.3
 	google.golang.org/api v0.129.0

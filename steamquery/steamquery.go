@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/common-nighthawk/go-figure"
+
 	"github.com/devusSs/steamquery-v2/config"
 	"github.com/devusSs/steamquery-v2/logging"
 	"github.com/devusSs/steamquery-v2/query"
@@ -47,6 +49,8 @@ func main() {
 	}
 
 	system.InitClearFunc()
+
+	printAsciiArt()
 
 	if err := logging.CreateLogsDirectory(*logDirFlag); err != nil {
 		log.Fatalf("Error creating logs directory: %s\n", err.Error())
@@ -128,6 +132,14 @@ func main() {
 		if err := query.WriteErrorCell(fmt.Errorf("%s (TS: %s)", err.Error(), time.Now().Local().Format("2006-01-02 15:04:05 CEST"))); err != nil {
 			logging.LogFatal(err.Error())
 		}
+
+		if *betaFeatures {
+			logging.LogWarning(fmt.Sprintf("BETA ERROR: %s", err.Error()))
+
+			if err := query.WriteNoErrorCell(); err != nil {
+				logging.LogFatal(err.Error())
+			}
+		}
 	} else {
 		if err := query.WriteNoErrorCell(); err != nil {
 			logging.LogFatal(err.Error())
@@ -144,4 +156,9 @@ func main() {
 	if err := logging.CloseLogFiles(); err != nil {
 		log.Fatalf("Error closing log files: %s\n", err.Error())
 	}
+}
+
+func printAsciiArt() {
+	asciiArt := figure.NewColorFigure("steamquery v2", "small", "green", true)
+	asciiArt.Print()
 }

@@ -135,10 +135,18 @@ func RunQuery() error {
 	}
 
 	if usingBeta {
-		_, err := steam.GetAndCompareSteamInventory(steamAPIKey, steamUser64, itemList, amountList)
+		totalSheetsMap, err := steam.GetAndCompareSteamInventory(
+			steamAPIKey,
+			steamUser64,
+			itemList,
+			amountList,
+		)
 		if err != nil {
 			return err
 		}
+
+		// TODO: find way to write this map to sheets without dismissing cell range
+		logging.LogDebug(fmt.Sprintf("TOTAL SHEETS MAP: %v", totalSheetsMap))
 
 		return nil
 	}

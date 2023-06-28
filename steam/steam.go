@@ -87,7 +87,11 @@ func GetAndCompareSteamInventory(
 		return nil, errors.New("steam down, retry later")
 	}
 
+	logging.LogSuccess("Steam is up and running")
+
 	logging.LogInfo("Fetching Steam CSGO inventory, please wait")
+
+	logging.LogWarning("NOTE: this will not work for storage units")
 
 	// This function already only fetches marketable items, no need to remove anything.
 	inventoryMap, err := getSteamInventory(steamID64)
@@ -123,24 +127,46 @@ func GetAndCompareSteamInventory(
 	logging.LogDebug(fmt.Sprintf("ITEM NAME AMOUNT MAP: %v", itemNameAmountMap))
 	logging.LogDebug(fmt.Sprintf("INVENTORY MAP: %v", inventoryMap))
 
-	missingMap := make(map[string]int)
+	missingAddMap := make(map[string]int)
 
 	logging.LogInfo("Comparing Steam inventory with provided sheets list now, please wait")
 
+	for item, amount := range itemNameAmountMap {
+		amountInInv, ok := inventoryMap[item]
+		if !ok {
+			missingAddMap[item] = amount
+		}
+
+		if amountInInv > amount {
+			missingAddMap[item] = amountInInv
+		}
+
+		if amountInInv < amount {
+			missingAddMap[item] = amount
+		}
+	}
+
+	for item, amount := range inventoryMap {
+		_, ok := itemNameAmountMap[item]
+		if !ok {
+			missingAddMap[item] = amount
+		}
+	}
+
 	logging.LogSuccess(
-		"Successfully compared lists and added missing (not including storage units)",
+		"Successfully compared lists and added missing",
 	)
 
-	logging.LogDebug(fmt.Sprintf("MISSING ITEM MAP: %v", missingMap))
+	logging.LogDebug(fmt.Sprintf("MISSING ITEM MAP: %v", missingAddMap))
 
-	return missingMap, nil
+	return missingAddMap, nil
 }
 
 func getSteamInventory(steamID64 uint64) (map[string]int, error) {
 	url := fmt.Sprintf("http://steamcommunity.com/inventory/%d/%d/%d", steamID64, 730, 2)
 
 	client := http.Client{}
-	client.Timeout = 3 * time.Second
+	client.Timeout = 2 * time.Second
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {

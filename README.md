@@ -65,6 +65,7 @@ If you ever need more configuration options simply set them via flags:
 -v  to print build information
 -a  to run the app in analysis mode (checks for potential errors)
 -sc to skip checks regarding last updated and error cell on Google Sheets
+-b  to enable and run beta features
 ```
 
 ## Why does this program need my Steam API key and my SteamID64?
