@@ -25,6 +25,7 @@ const (
 )
 
 var (
+	usingBeta      bool
 	skipCellChecks bool
 
 	spreadsheets *tables.SpreadsheetService
@@ -43,6 +44,7 @@ var (
 	differenceCell  string
 
 	steamAPIKey string
+	steamUser64 uint64
 )
 
 func InitQuery(
@@ -53,8 +55,12 @@ func InitQuery(
 	amountColumn string,
 	orgCells config.OrgCells,
 	steamAPIKeyConfig string,
+	steamUserID64 uint64,
 	skipChecks bool,
+	betaFeatures bool,
 ) {
+	usingBeta = betaFeatures
+
 	if skipChecks {
 		logging.LogWarning(
 			"Skip checks flag specified, skipping last updated and error cell check on sheets",
@@ -79,6 +85,7 @@ func InitQuery(
 	differenceCell = orgCells.DifferenceCell
 
 	steamAPIKey = steamAPIKeyConfig
+	steamUser64 = steamUserID64
 }
 
 func RunQuery() error {
@@ -125,6 +132,15 @@ func RunQuery() error {
 	amountList, err := getItemAmountCells()
 	if err != nil {
 		return err
+	}
+
+	if usingBeta {
+		_, err := steam.GetAndCompareSteamInventory(steamAPIKey, steamUser64, itemList, amountList)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	priceMap, err := getItemMarketValues(itemList)
@@ -327,9 +343,11 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 			time.Sleep(1 * time.Minute)
 		}
 
+		logging.LogDebug(fmt.Sprintf("Fetching price for %s", item))
+
 		req, err := http.NewRequest(
 			http.MethodGet,
-			fmt.Sprintf("%s%s", baseURL, url.QueryEscape(item)),
+			fmt.Sprintf("%s%s", baseURL, url.PathEscape(item)),
 			nil,
 		)
 		if err != nil {

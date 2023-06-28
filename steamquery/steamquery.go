@@ -26,6 +26,7 @@ func main() {
 	disableUpdatesFlag := flag.Bool("du", false, "disables update check on startup")
 	analysisModeFlag := flag.Bool("a", false, "runs the app in analysis mode and exits")
 	skipChecks := flag.Bool("sc", false, "skips last updated and error cell checks on sheets")
+	betaFeatures := flag.Bool("b", false, "enables beta features, not recommended")
 	flag.Parse()
 
 	if *analysisModeFlag {
@@ -72,6 +73,10 @@ func main() {
 		updater.PrintBuildInfo()
 	}
 
+	if *betaFeatures {
+		logging.LogWarning("Using beta features, please expects bugs and crucial errors")
+	}
+
 	if *disableUpdatesFlag {
 		logging.LogWarning("Skipped update check because of -du flag")
 	}
@@ -106,7 +111,9 @@ func main() {
 		cfg.AmountColumn,
 		cfg.OrgCells,
 		cfg.SteamAPIKey,
+		cfg.SteamUserID64,
 		*skipChecks,
+		*betaFeatures,
 	)
 
 	if err := query.RunQuery(); err != nil {

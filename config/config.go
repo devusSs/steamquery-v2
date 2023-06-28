@@ -28,6 +28,7 @@ type Config struct {
 	OrgCells         OrgCells `json:"org_cells"`
 	SpreadSheetID    string   `json:"spread_sheet_id"`
 	SteamAPIKey      string   `json:"steam_api_key"`
+	SteamUserID64    uint64   `json:"steam_user_id_64"`
 }
 
 func LoadConfig(configPath string) (*Config, error) {
@@ -98,6 +99,10 @@ func (c *Config) CheckConfig() error {
 
 	if c.SteamAPIKey == "" {
 		return errors.New("missing steam api key in config")
+	}
+
+	if c.SteamUserID64 == 0 {
+		return errors.New("missing steam user id 64 in config")
 	}
 
 	return nil

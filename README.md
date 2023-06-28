@@ -67,11 +67,15 @@ If you ever need more configuration options simply set them via flags:
 -sc to skip checks regarding last updated and error cell on Google Sheets
 ```
 
-## Why does this program need my Steam API key?
+## Why does this program need my Steam API key and my SteamID64?
 
 This program queries the status of the Steam Sessions Logon and the Steam Community Status for CSGO to check if everything is up and working before running queries against the endpoints.<br/>
 These API routes are protected and need a valid Steam API key to work.<br/>
-Get your's [here](https://steamcommunity.com/dev/apikey).
+Get your's [here](https://steamcommunity.com/dev/apikey).<br/>
+
+The SteamID64 is needed to query your CSGO inventory (will be introduced in the near future) programmatically.<br/>
+This feature will be used to compare your Google sheet with your inventory and add potentially missing items.<br/>
+You can get your SteamID64 on different websites, for example [here](https://steamid.uk/). The SteamID64 may be called CommunityID on some sites.<br/>
 
 ## Why do I need to count the amounts manually?
 

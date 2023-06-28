@@ -62,6 +62,16 @@ dev: build
 	@cd ./testing && ./steamquery -c "./files/config.dev.json" -d -du -sc
 
 # DO NOT CHANGE.
+beta: build
+	@clear
+	@rm -rf ./testing
+	@mkdir ./testing
+	@mkdir ./testing/files
+	@cp -R ./files ./testing
+	@cp ./release/steamquery_$(BUILD_OS)_$(BUILD_ARCH)/steamquery ./testing
+	@cd ./testing && ./steamquery -c "./files/config.dev.json" -d -du -sc -b
+
+# DO NOT CHANGE.
 version: build
 	@clear
 	@rm -rf ./testing

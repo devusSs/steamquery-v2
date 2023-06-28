@@ -2,8 +2,12 @@ package steam
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/devusSs/steamquery-v2/logging"
 	"github.com/devusSs/steamquery-v2/types"
@@ -46,7 +50,6 @@ func IsSteamCSGOAPIUp(apiKey string) (bool, error) {
 	var steamStatusSessions steamStatus
 	var steamStatusCommunity steamStatus
 
-	// TODO: this always defaults, why?
 	switch resp.Result.Services.SessionsLogon {
 	case "normal":
 		steamStatusSessions = steamNormal
@@ -57,7 +60,6 @@ func IsSteamCSGOAPIUp(apiKey string) (bool, error) {
 		steamStatusSessions = steamDown
 	}
 
-	// TODO: this always defaults, why?
 	switch resp.Result.Services.SteamCommunity {
 	case "normal":
 		steamStatusCommunity = steamNormal
@@ -69,4 +71,115 @@ func IsSteamCSGOAPIUp(apiKey string) (bool, error) {
 	}
 
 	return steamStatusSessions < 3 && steamStatusCommunity < 3, nil
+}
+
+func GetAndCompareSteamInventory(
+	apiKey string, steamID64 uint64,
+	itemListMap map[string]int,
+	itemAmountMap map[int]int,
+) (map[string]int, error) {
+	steamUp, err := IsSteamCSGOAPIUp(apiKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if !steamUp {
+		return nil, errors.New("steam down, retry later")
+	}
+
+	logging.LogInfo("Fetching Steam CSGO inventory, please wait")
+
+	// This function already only fetches marketable items, no need to remove anything.
+	inventoryMap, err := getSteamInventory(steamID64)
+	if err != nil {
+		return nil, err
+	}
+
+	logging.LogSuccess("Successfully fetched Steam CSGO inventory")
+
+	logging.LogInfo("Mapping amounts to name from sheets")
+
+	itemNameAmountMap := make(map[string]int)
+
+	for item, cell := range itemListMap {
+		if item == "" {
+			continue
+		}
+
+		if strings.Contains(item, "empty_cell") {
+			continue
+		}
+
+		amount, ok := itemAmountMap[cell]
+		if !ok {
+			return nil, fmt.Errorf("missing amount for item %s", item)
+		}
+
+		itemNameAmountMap[item] = amount
+	}
+
+	logging.LogSuccess("Done mapping amounts to name from sheets")
+
+	logging.LogDebug(fmt.Sprintf("ITEM NAME AMOUNT MAP: %v", itemNameAmountMap))
+	logging.LogDebug(fmt.Sprintf("INVENTORY MAP: %v", inventoryMap))
+
+	missingMap := make(map[string]int)
+
+	logging.LogInfo("Comparing Steam inventory with provided sheets list now, please wait")
+
+	logging.LogSuccess(
+		"Successfully compared lists and added missing (not including storage units)",
+	)
+
+	logging.LogDebug(fmt.Sprintf("MISSING ITEM MAP: %v", missingMap))
+
+	return missingMap, nil
+}
+
+func getSteamInventory(steamID64 uint64) (map[string]int, error) {
+	url := fmt.Sprintf("http://steamcommunity.com/inventory/%d/%d/%d", steamID64, 730, 2)
+
+	client := http.Client{}
+	client.Timeout = 3 * time.Second
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Accept", "application/json")
+
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(
+			"got unwanted Steam response status: %s (code: %d)",
+			res.Status,
+			res.StatusCode,
+		)
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var steamReturn types.SteamInventoryReturn
+
+	if err := json.Unmarshal(body, &steamReturn); err != nil {
+		return nil, err
+	}
+
+	itemCountMap := make(map[string]int)
+
+	for _, item := range steamReturn.Descriptions {
+		if item.Marketable == 1 {
+			itemCountMap[item.Name]++
+		}
+	}
+
+	return itemCountMap, nil
 }
