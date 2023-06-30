@@ -41,6 +41,8 @@ var (
 
 	steamAPIKey string
 	steamUser64 uint64
+
+	QueryRunning bool
 )
 
 func InitQuery(
@@ -84,13 +86,21 @@ func InitQuery(
 	steamUser64 = steamUserID64
 }
 
-func RunQuery() error {
+func RunQuery(steamRetryInterval int) error {
+	QueryRunning = true
+
 	steamUp, err := steam.IsSteamCSGOAPIUp(steamAPIKey)
 	if err != nil {
 		return err
 	}
 
 	if !steamUp {
+		if steamRetryInterval != 0 {
+			logging.LogInfo(fmt.Sprintf("Rerunning steamquery in %d minutes", steamRetryInterval))
+			time.Sleep(time.Duration(steamRetryInterval) * time.Minute)
+			return RunQuery(steamRetryInterval)
+		}
+
 		return errors.New("steam down, retry later")
 	}
 
@@ -181,6 +191,8 @@ func RunQuery() error {
 	if err := writeLastUpdatedCell(); err != nil {
 		return err
 	}
+
+	QueryRunning = false
 
 	return nil
 }

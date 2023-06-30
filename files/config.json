@@ -15,5 +15,15 @@
   },
   "spread_sheet_id":"",
   "steam_api_key": "",
-  "steam_user_id_64": 0
+  "steam_user_id_64": 0,
+  "watch_dog": {
+    "retry_interval": 0,
+    "steam_retry_interval": 0,
+    "smtp_host": "",
+    "smtp_port": 0,
+    "smtp_user": "",
+    "smtp_password": "",
+    "smtp_from": "",
+    "smtp_to": ""
+  }
 }

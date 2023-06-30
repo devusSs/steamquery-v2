@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"runtime"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/devusSs/steamquery-v2/system"
 	"github.com/devusSs/steamquery-v2/tables"
 	"github.com/devusSs/steamquery-v2/updater"
+	"github.com/devusSs/steamquery-v2/utils"
 )
 
 func main() {
@@ -29,6 +31,7 @@ func main() {
 	analysisModeFlag := flag.Bool("a", false, "runs the app in analysis mode and exits")
 	skipChecks := flag.Bool("sc", false, "skips last updated and error cell checks on sheets")
 	betaFeatures := flag.Bool("b", false, "enables beta features, not recommended")
+	watchDog := flag.Bool("w", false, "enables watchdog mode with specified interval")
 	flag.Parse()
 
 	if *analysisModeFlag {
@@ -90,7 +93,7 @@ func main() {
 		logging.LogFatal(err.Error())
 	}
 
-	if err := cfg.CheckConfig(); err != nil {
+	if err := cfg.CheckConfig(*watchDog); err != nil {
 		logging.LogFatal(err.Error())
 	}
 
@@ -120,36 +123,140 @@ func main() {
 		*betaFeatures,
 	)
 
-	if err := query.RunQuery(); err != nil {
-		if strings.Contains(err.Error(), "last run has been less than 3 minutes ago") {
-			logging.LogFatal(err.Error())
-		}
+	if *watchDog {
+		logging.LogWarning("Running app in watchdog mode")
 
-		if strings.Contains(err.Error(), "last error has been less than 3 minutes ago") {
-			logging.LogFatal(err.Error())
-		}
+		utils.InitMail(
+			cfg.WatchDog.SMTPHost,
+			cfg.WatchDog.SMTPPort,
+			cfg.WatchDog.SMTPUser,
+			cfg.WatchDog.SMTPPassword,
+			cfg.WatchDog.SMTPFrom,
+			cfg.WatchDog.SMTPTo,
+		)
 
-		if err := query.WriteErrorCell(fmt.Errorf("%s (TS: %s)", err.Error(), time.Now().Local().Format("2006-01-02 15:04:05 CEST"))); err != nil {
-			logging.LogFatal(err.Error())
-		}
+		rerunticker := time.NewTicker(time.Duration(cfg.WatchDog.RetryInterval) * time.Hour)
+		stopRerun := make(chan bool)
 
-		if *betaFeatures {
-			logging.LogWarning(fmt.Sprintf("BETA ERROR: %s", err.Error()))
+		// Run the app once and the on every tick.
+		if err := query.RunQuery(cfg.WatchDog.SteamRetryInterval); err != nil {
+			if strings.Contains(err.Error(), "last run has been less than 3 minutes ago") {
+				logging.LogFatal(err.Error())
+			}
 
+			if strings.Contains(err.Error(), "last error has been less than 3 minutes ago") {
+				logging.LogFatal(err.Error())
+			}
+
+			if err := query.WriteErrorCell(fmt.Errorf("%s (TS: %s)", err.Error(), time.Now().Local().Format("2006-01-02 15:04:05 CEST"))); err != nil {
+				logging.LogFatal(err.Error())
+			}
+
+			if *betaFeatures {
+				logging.LogWarning(fmt.Sprintf("BETA ERROR: %s", err.Error()))
+
+				if err := query.WriteNoErrorCell(); err != nil {
+					logging.LogFatal(err.Error())
+				}
+			}
+
+			mailData := utils.EmailData{}
+			mailData.Subject = "steamquery-v2 run failed"
+			mailData.Data = fmt.Sprintf(
+				"Your last steamquery-v2 run failed.\n\nError: %s\n\nTimestamp: %s",
+				err.Error(),
+				time.Now().Local().String(),
+			)
+			if err := utils.SendMail(&mailData); err != nil {
+				logging.LogFatal(err.Error())
+			}
+		} else {
 			if err := query.WriteNoErrorCell(); err != nil {
 				logging.LogFatal(err.Error())
 			}
 		}
+
+		logging.LogSuccess("Initial run completed")
+
+		logging.LogInfo(
+			fmt.Sprintf("Setup routine to rerun app every %d hour(s)", cfg.WatchDog.RetryInterval),
+		)
+
+		logging.LogInfo("Press CTRL+C to cancel anytime")
+
+		go func() {
+			for {
+				select {
+				case <-stopRerun:
+					return
+				case <-rerunticker.C:
+					if !query.QueryRunning {
+						if err := query.RunQuery(cfg.WatchDog.SteamRetryInterval); err != nil {
+							if err := query.WriteErrorCell(fmt.Errorf("%s (TS: %s)", err.Error(), time.Now().Local().Format("2006-01-02 15:04:05 CEST"))); err != nil {
+								logging.LogFatal(err.Error())
+							}
+
+							mailData := utils.EmailData{}
+							mailData.Subject = "steamquery-v2 run failed"
+							mailData.Data = fmt.Sprintf(
+								"Your last steamquery-v2 run failed.\nError: %s\nTimestamp: %s",
+								err.Error(),
+								time.Now().Local().String(),
+							)
+							if err := utils.SendMail(&mailData); err != nil {
+								logging.LogFatal(err.Error())
+							}
+						}
+
+						system.Clear[runtime.GOOS]()
+						logging.LogSuccess("Query run completed")
+						logging.LogInfo(
+							fmt.Sprintf(
+								"Running query again in %d hour(s)",
+								cfg.WatchDog.RetryInterval,
+							),
+						)
+						logging.LogInfo("Press CTRL+C to exit")
+					}
+				}
+			}
+		}()
+
+		system.ListenForCTRLC()
+		rerunticker.Stop()
+		stopRerun <- true
 	} else {
-		if err := query.WriteNoErrorCell(); err != nil {
-			logging.LogFatal(err.Error())
+		if err := query.RunQuery(cfg.WatchDog.SteamRetryInterval); err != nil {
+			if strings.Contains(err.Error(), "last run has been less than 3 minutes ago") {
+				logging.LogFatal(err.Error())
+			}
+
+			if strings.Contains(err.Error(), "last error has been less than 3 minutes ago") {
+				logging.LogFatal(err.Error())
+			}
+
+			if err := query.WriteErrorCell(fmt.Errorf("%s (TS: %s)", err.Error(), time.Now().Local().Format("2006-01-02 15:04:05 CEST"))); err != nil {
+				logging.LogFatal(err.Error())
+			}
+
+			if *betaFeatures {
+				logging.LogWarning(fmt.Sprintf("BETA ERROR: %s", err.Error()))
+
+				if err := query.WriteNoErrorCell(); err != nil {
+					logging.LogFatal(err.Error())
+				}
+			}
+		} else {
+			if err := query.WriteNoErrorCell(); err != nil {
+				logging.LogFatal(err.Error())
+			}
 		}
 	}
 
 	logging.LogSuccess("Done, exiting app now")
 
 	logging.LogDebug(
-		fmt.Sprintf("Programm execution took %.2f second(s)", time.Since(startTime).Seconds()),
+		fmt.Sprintf("Program ran for %.2f second(s)", time.Since(startTime).Seconds()),
 	)
 
 	// App exit

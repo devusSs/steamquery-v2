@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"os"
+
+	"github.com/devusSs/steamquery-v2/utils"
 )
 
 type ItemList struct {
@@ -20,6 +22,17 @@ type OrgCells struct {
 	DifferenceCell  string `json:"difference_cell"`
 }
 
+type WatchDog struct {
+	RetryInterval      int    `json:"retry_interval"`
+	SteamRetryInterval int    `json:"steam_retry_interval"`
+	SMTPHost           string `json:"smtp_host"`
+	SMTPPort           int    `json:"smtp_port"`
+	SMTPUser           string `json:"smtp_user"`
+	SMTPPassword       string `json:"smtp_password"`
+	SMTPFrom           string `json:"smtp_from"`
+	SMTPTo             string `json:"smtp_to"`
+}
+
 type Config struct {
 	ItemList         ItemList `json:"item_list"`
 	PriceColumn      string   `json:"price_column"`
@@ -29,6 +42,7 @@ type Config struct {
 	SpreadSheetID    string   `json:"spread_sheet_id"`
 	SteamAPIKey      string   `json:"steam_api_key"`
 	SteamUserID64    uint64   `json:"steam_user_id_64"`
+	WatchDog         WatchDog `json:"watch_dog"`
 }
 
 func LoadConfig(configPath string) (*Config, error) {
@@ -52,7 +66,7 @@ func LoadConfig(configPath string) (*Config, error) {
 	return &cfg, nil
 }
 
-func (c *Config) CheckConfig() error {
+func (c *Config) CheckConfig(watchDog bool) error {
 	if c.ItemList.ColumnLetter == "" {
 		return errors.New("missing item list column letter in config")
 	}
@@ -103,6 +117,52 @@ func (c *Config) CheckConfig() error {
 
 	if c.SteamUserID64 == 0 {
 		return errors.New("missing steam user id 64 in config")
+	}
+
+	if watchDog {
+		if c.WatchDog.RetryInterval == 0 {
+			return errors.New("missing retry interval in config")
+		}
+
+		if c.WatchDog.SteamRetryInterval == 0 {
+			return errors.New("missing steam retry interval in config")
+		}
+
+		if c.WatchDog.SteamRetryInterval < 5 {
+			return errors.New("steam retry interval needs to be at least 5 minutes")
+		}
+
+		if c.WatchDog.SMTPHost == "" {
+			return errors.New("missing smpt host in config")
+		}
+
+		if c.WatchDog.SMTPPort == 0 {
+			return errors.New("missing smtp port in config")
+		}
+
+		if c.WatchDog.SMTPUser == "" {
+			return errors.New("missing smtp user in config")
+		}
+
+		if c.WatchDog.SMTPPassword == "" {
+			return errors.New("missing smtp password in config")
+		}
+
+		if c.WatchDog.SMTPFrom == "" {
+			return errors.New("missing smtp from in config")
+		}
+
+		if c.WatchDog.SMTPTo == "" {
+			return errors.New("missing smtp to in config")
+		}
+
+		if err := utils.ValidateMail(c.WatchDog.SMTPFrom); err != nil {
+			return err
+		}
+
+		if err := utils.ValidateMail(c.WatchDog.SMTPTo); err != nil {
+			return err
+		}
 	}
 
 	return nil

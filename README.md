@@ -44,8 +44,22 @@ For that example you would set following variables in your config:
   },
   "spread_sheet_id": "your spreadsheet id from the URL",
   "steam_api_key": "your api key"
+  "steam_user_id_64": 0,
+  "watch_dog": {
+    "retry_interval": 0,
+    "steam_retry_interval": 0,
+    "smtp_host": "",
+    "smtp_port": 0,
+    "smtp_user": "",
+    "smtp_password": "",
+    "smtp_from": ",
+    "smtp_to": ""
+  }
 }
 ```
+
+`Retry interval` specifies the integer value in hours how often the program should update the prices / run the query.<br/>
+`Steam retry interval` specifies the integer value in minutes how often the program should retry running the query when Steam is down or not working.
 
 To run the program simple execute:
 
@@ -66,6 +80,7 @@ If you ever need more configuration options simply set them via flags:
 -a  to run the app in analysis mode (checks for potential errors)
 -sc to skip checks regarding last updated and error cell on Google Sheets
 -b  to enable and run beta features
+-w  to run the app in watchdog mode (automatic rerun after specified interval)
 ```
 
 ## Why does this program need my Steam API key and my SteamID64?
@@ -83,6 +98,15 @@ You can get your SteamID64 on different websites, for example [here](https://ste
 While it is technically prossible to query the Steam inventories via the official API and count the items programmatically, it is not possible to look into storage units which many people use to store their cases and capsules.<br/>
 As long as that is not possible you will need to count your items manually.
 
+## Why do I need to enter SMTP values and an e-mail?
+
+To run the app manually when wanted you will not need to enter SMTP details. If you do however want to use the watchdog mode (-w flag) you will need to specify SMTP details.<br/>
+The app will then send you an e-mail whenever a run fails. This is intended to keep track of your app status when running the app in watchdog mode (for example on a server).
+
+## Why do I need to run the program manually?
+
+You do not! Simply use the `-w` flag on program launch and specify watchdog details (see above) in the config.<br/>
+
 ## Problem Solving
 
 You may run the program in analysis mode to check for potential problems.<br/>
@@ -99,8 +123,3 @@ If that does not help you may open an issue.
 Either download an already compiled program from the [releases](https://github.com/devusSs/steamquery-v2/releases) section or clone the repository and compile the program yourself. You will need the [Go(lang)](https://go.dev) binaries for that. Use the `Makefile` for more information.
 
 Errors will usually be self-explanatory. Any weird errors may require the use of [Google](https://google.com) or [creating an issue](https://github.com/devusSs/steamquery-v2/issues) on Github.
-
-## Further features (soonTM)
-
-- automatically query items from Steam inventories
-- automatically check for already added items and compare them to queried items from above

@@ -72,13 +72,22 @@ beta: build
 	@cd ./testing && ./steamquery -c "./files/config.dev.json" -d -du -sc -b
 
 # DO NOT CHANGE.
+watchdog: build
+	@clear
+	@rm -rf ./testing
+	@mkdir ./testing
+	@mkdir ./testing/files
+	@cp -R ./files ./testing
+	@cp ./release/steamquery_$(BUILD_OS)_$(BUILD_ARCH)/steamquery ./testing
+	@cd ./testing && ./steamquery -c "./files/config.dev.json" -d -du -w
+
+# DO NOT CHANGE.
 version: build
 	@clear
 	@rm -rf ./testing
 	@mkdir ./testing
 	@cp ./release/steamquery_$(BUILD_OS)_$(BUILD_ARCH)/steamquery ./testing
 	@cd ./testing && ./steamquery -v -du
-
 
 # DO NOT CHANGE.
 analysis: build
@@ -94,6 +103,8 @@ analysis: build
 # DO NOT CHANGE.
 clean:
 	@clear
+	@go mod tidy
 	@rm -rf ./logs
 	@rm -rf ./release
 	@rm -rf ./testing
+	@rm -rf ./dist

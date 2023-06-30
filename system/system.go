@@ -7,8 +7,10 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 
 	"github.com/devusSs/steamquery-v2/config"
 	"github.com/devusSs/steamquery-v2/logging"
@@ -55,6 +57,13 @@ func GetUserAgentHeaderFromOS() string {
 	default:
 		return "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 	}
+}
+
+func ListenForCTRLC() {
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
+	<-done
+	fmt.Println("")
 }
 
 func CheckForGCloudConfigFile(path string) error {
@@ -234,7 +243,7 @@ func loadAndCheckConfig(cfg string) error {
 
 	fmt.Printf("%s Checking config\n", logging.InfSign)
 
-	if err := c.CheckConfig(); err != nil {
+	if err := c.CheckConfig(false); err != nil {
 		return err
 	}
 
