@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
 var (
@@ -22,8 +23,8 @@ var (
 	logLevel      string
 	logsDirectory string
 
-	appLogFile   *os.File
-	errorLogFile *os.File
+	appLogger   *lumberjack.Logger
+	errorLogger *lumberjack.Logger
 )
 
 func CreateLogsDirectory(dir string) error {
@@ -41,34 +42,37 @@ func InitLoggers(level string) error {
 	logLevel = level
 	consoleLogger = log.New(os.Stdout, "", 0)
 
-	aFile, err := os.Create(fmt.Sprintf("%s/app.log", logsDirectory))
-	if err != nil {
-		return err
+	appLogger = &lumberjack.Logger{
+		Filename:   fmt.Sprintf("%s/app.log", logsDirectory),
+		MaxSize:    50,
+		MaxBackups: 3,
+		MaxAge:     28,
+		Compress:   true,
 	}
 
-	eFile, err := os.Create(fmt.Sprintf("%s/error.log", logsDirectory))
-	if err != nil {
-		return err
+	errorLogger = &lumberjack.Logger{
+		Filename:   fmt.Sprintf("%s/error.log", logsDirectory),
+		MaxSize:    50,
+		MaxBackups: 3,
+		MaxAge:     28,
+		Compress:   true,
 	}
-
-	appLogFile = aFile
-	errorLogFile = eFile
 
 	return nil
 }
 
 func CloseLogFiles() error {
-	if err := appLogFile.Close(); err != nil {
+	if err := appLogger.Close(); err != nil {
 		return err
 	}
-	return errorLogFile.Close()
+	return errorLogger.Close()
 }
 
 func LogDebug(message string) {
 	if logLevel != "release" {
 		consoleLogger.Printf("%s %s\n", DebugSign, message)
 	}
-	_, err := appLogFile.Write(
+	_, err := appLogger.Write(
 		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), InfSign, message)),
 	)
 	if err != nil {
@@ -79,7 +83,7 @@ func LogDebug(message string) {
 func LogInfo(message string) {
 	consoleLogger.Printf("%s %s\n", InfSign, message)
 
-	_, err := appLogFile.Write(
+	_, err := appLogger.Write(
 		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), InfSign, message)),
 	)
 	if err != nil {
@@ -90,7 +94,7 @@ func LogInfo(message string) {
 func LogWarning(message string) {
 	consoleLogger.Printf("%s %s\n", WarnSign, message)
 
-	_, err := appLogFile.Write(
+	_, err := appLogger.Write(
 		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), WarnSign, message)),
 	)
 	if err != nil {
@@ -101,7 +105,7 @@ func LogWarning(message string) {
 func LogError(message string) {
 	consoleLogger.Printf("%s [non-critical] %s\n", ErrSign, message)
 
-	_, err := errorLogFile.Write(
+	_, err := errorLogger.Write(
 		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), ErrSign, message)),
 	)
 	if err != nil {
@@ -112,7 +116,7 @@ func LogError(message string) {
 func LogFatal(message string) {
 	consoleLogger.Printf("%s [critical] %s\n", ErrSign, message)
 
-	_, err := errorLogFile.Write(
+	_, err := errorLogger.Write(
 		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), ErrSign, message)),
 	)
 	if err != nil {
@@ -125,7 +129,7 @@ func LogFatal(message string) {
 func LogSuccess(message string) {
 	consoleLogger.Printf("%s %s\n", SucSign, message)
 
-	_, err := appLogFile.Write(
+	_, err := appLogger.Write(
 		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), SucSign, message)),
 	)
 	if err != nil {
