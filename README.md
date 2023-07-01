@@ -48,18 +48,20 @@ For that example you would set following variables in your config:
   "watch_dog": {
     "retry_interval": 0,
     "steam_retry_interval": 0,
+    "max_price_drop": 0.00,
     "smtp_host": "",
     "smtp_port": 0,
     "smtp_user": "",
     "smtp_password": "",
-    "smtp_from": ",
+    "smtp_from": "",
     "smtp_to": ""
   }
 }
 ```
 
 `Retry interval` specifies the integer value in hours how often the program should update the prices / run the query.<br/>
-`Steam retry interval` specifies the integer value in minutes how often the program should retry running the query when Steam is down or not working.
+`Steam retry interval` specifies the integer value in minutes how often the program should retry running the query when Steam is down or not working.<br/>
+`Max price drop` specifies the float64 value items are allowed to drop before the app sends a warning e-mail.
 
 To run the program simple execute:
 

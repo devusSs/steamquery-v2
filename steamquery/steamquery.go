@@ -19,6 +19,11 @@ import (
 	"github.com/devusSs/steamquery-v2/utils"
 )
 
+// The maximum price items are allowed to drop (in total) before the app sends a warning mail.
+//
+// This will only work in watchdog mode.
+var maxPriceDifference float64
+
 func main() {
 	startTime := time.Now().Local()
 
@@ -124,7 +129,17 @@ func main() {
 	)
 
 	if *watchDog {
+		maxPriceDifference = cfg.WatchDog.MaxPriceDrop
+
 		logging.LogWarning("Running app in watchdog mode")
+
+		logging.LogInfo("Comparing potential daily requests with limit, please wait")
+
+		if err := query.CompareRequestsDayWithLimit(cfg.WatchDog.RetryInterval); err != nil {
+			logging.LogFatal(err.Error())
+		}
+
+		logging.LogSuccess("No potential request limit exceeds found")
 
 		utils.InitMail(
 			cfg.WatchDog.SMTPHost,
@@ -135,11 +150,16 @@ func main() {
 			cfg.WatchDog.SMTPTo,
 		)
 
+		stopUpdatesCheck := make(chan bool)
+
+		go updater.PeriodicUpdateCheck(stopUpdatesCheck)
+
 		rerunticker := time.NewTicker(time.Duration(cfg.WatchDog.RetryInterval) * time.Hour)
 		stopRerun := make(chan bool)
 
 		// Run the app once and the on every tick.
-		if err := query.RunQuery(cfg.WatchDog.SteamRetryInterval); err != nil {
+		priceDifference, err := query.RunQuery(cfg.WatchDog.SteamRetryInterval)
+		if err != nil {
 			if strings.Contains(err.Error(), "last run has been less than 3 minutes ago") {
 				logging.LogFatal(err.Error())
 			}
@@ -176,6 +196,19 @@ func main() {
 			}
 		}
 
+		if priceDifference > maxPriceDifference {
+			mailData := utils.EmailData{}
+			mailData.Subject = "steamquery-v2 price drop alert"
+			mailData.Data = fmt.Sprintf(
+				"Since your last steamquery-v2 run prices dropped a lot.\n\nDrop value: %.2f€\n\nTimestamp: %s",
+				priceDifference,
+				time.Now().Local().String(),
+			)
+			if err := utils.SendMail(&mailData); err != nil {
+				logging.LogFatal(err.Error())
+			}
+		}
+
 		logging.LogSuccess("Initial run completed")
 
 		logging.LogInfo(
@@ -191,7 +224,8 @@ func main() {
 					return
 				case <-rerunticker.C:
 					if !query.QueryRunning {
-						if err := query.RunQuery(cfg.WatchDog.SteamRetryInterval); err != nil {
+						priceDifference, err := query.RunQuery(cfg.WatchDog.SteamRetryInterval)
+						if err != nil {
 							if err := query.WriteErrorCell(fmt.Errorf("%s (TS: %s)", err.Error(), time.Now().Local().Format("2006-01-02 15:04:05 CEST"))); err != nil {
 								logging.LogFatal(err.Error())
 							}
@@ -201,6 +235,19 @@ func main() {
 							mailData.Data = fmt.Sprintf(
 								"Your last steamquery-v2 run failed.\nError: %s\nTimestamp: %s",
 								err.Error(),
+								time.Now().Local().String(),
+							)
+							if err := utils.SendMail(&mailData); err != nil {
+								logging.LogFatal(err.Error())
+							}
+						}
+
+						if priceDifference > maxPriceDifference {
+							mailData := utils.EmailData{}
+							mailData.Subject = "steamquery-v2 price drop alert"
+							mailData.Data = fmt.Sprintf(
+								"Since your last steamquery-v2 run prices dropped a lot.\n\nDrop value: %.2f€\n\nTimestamp: %s",
+								priceDifference,
 								time.Now().Local().String(),
 							)
 							if err := utils.SendMail(&mailData); err != nil {
@@ -225,8 +272,9 @@ func main() {
 		system.ListenForCTRLC()
 		rerunticker.Stop()
 		stopRerun <- true
+		stopUpdatesCheck <- true
 	} else {
-		if err := query.RunQuery(cfg.WatchDog.SteamRetryInterval); err != nil {
+		if _, err := query.RunQuery(cfg.WatchDog.SteamRetryInterval); err != nil {
 			if strings.Contains(err.Error(), "last run has been less than 3 minutes ago") {
 				logging.LogFatal(err.Error())
 			}

@@ -86,12 +86,12 @@ func InitQuery(
 	steamUser64 = steamUserID64
 }
 
-func RunQuery(steamRetryInterval int) error {
+func RunQuery(steamRetryInterval int) (float64, error) {
 	QueryRunning = true
 
 	steamUp, err := steam.IsSteamCSGOAPIUp(steamAPIKey)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if !steamUp {
@@ -101,7 +101,7 @@ func RunQuery(steamRetryInterval int) error {
 			return RunQuery(steamRetryInterval)
 		}
 
-		return errors.New("steam down, retry later")
+		return 0, errors.New("steam down, retry later")
 	}
 
 	logging.LogSuccess("Steam is up, proceeding")
@@ -109,35 +109,35 @@ func RunQuery(steamRetryInterval int) error {
 	if !skipCellChecks {
 		lastUpdatedString, err := getLastUpdatedCellValue()
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		if lastUpdatedString != "" {
 			if err := compareLastUpdatedCell(lastUpdatedString); err != nil {
-				return err
+				return 0, err
 			}
 		}
 
 		lastErrorTimestamp, err := getLastErrorTimestamp()
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		if !lastErrorTimestamp.IsZero() {
 			if err := compareLastErrorTimestamp(lastErrorTimestamp); err != nil {
-				return err
+				return 0, err
 			}
 		}
 	}
 
 	itemList, err := getItemNamesFromSheets()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	amountList, err := getItemAmountCells()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if usingBeta {
@@ -148,53 +148,54 @@ func RunQuery(steamRetryInterval int) error {
 			amountList,
 		)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		// TODO: find way to write this map to sheets without dismissing cell range
 		logging.LogDebug(fmt.Sprintf("TOTAL SHEETS MAP: %v", totalSheetsMap))
 
-		return nil
+		return 0, nil
 	}
 
 	priceMap, err := getItemMarketValues(itemList)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if err := writePricesForItemMap(itemList, priceMap); err != nil {
-		return err
+		return 0, err
 	}
 
 	totalPricesItemsMap, err := calculateValueItemAmount(amountList)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if err := writeTotalPrices(totalPricesItemsMap); err != nil {
-		return err
+		return 0, err
 	}
 
 	overallValuePreRun, err := getOverallValue()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if err := updateTotalValue(totalPricesItemsMap); err != nil {
-		return err
+		return 0, err
 	}
 
-	if err := updateDifferenceCell(overallValuePreRun); err != nil {
-		return err
+	priceDifference, err := updateDifferenceCell(overallValuePreRun)
+	if err != nil {
+		return 0, err
 	}
 
 	if err := writeLastUpdatedCell(); err != nil {
-		return err
+		return 0, err
 	}
 
 	QueryRunning = false
 
-	return nil
+	return priceDifference, nil
 }
 
 func WriteErrorCell(err error) error {
@@ -223,6 +224,37 @@ func WriteNoErrorCell() error {
 	}
 
 	logging.LogSuccess("Successfully wrote error cell")
+
+	return nil
+}
+
+// Helper function to calculate estimated runs / requests per day on watchdog mode.
+//
+// Will return an error when potential requests exceed limit (20 / minute).
+func CompareRequestsDayWithLimit(retryInterval int) error {
+	// 24 hours = 1440min, 20 requests per minute is the limit for priceoverview
+	maxRequestsDayEstimate := 1440 * 20
+
+	items, err := getItemNamesFromSheets()
+	if err != nil {
+		return err
+	}
+
+	requestsPerRun := 0
+
+	for item := range items {
+		if !strings.Contains(item, "empty_cell_") {
+			requestsPerRun++
+		}
+	}
+
+	runsPerDay := 24 / retryInterval
+
+	requestsPerDay := requestsPerRun * runsPerDay
+
+	if requestsPerDay > maxRequestsDayEstimate {
+		return errors.New("potential requests limit exceeded, please increase your retry interval")
+	}
 
 	return nil
 }
@@ -683,7 +715,7 @@ func updateTotalValue(totalPrices map[int]string) error {
 }
 
 // Function calculates and updates the difference compared to last run.
-func updateDifferenceCell(preRunTotal string) error {
+func updateDifferenceCell(preRunTotal string) (float64, error) {
 	logging.LogInfo("Updating difference cell, please wait")
 
 	var difference float64
@@ -694,12 +726,12 @@ func updateDifferenceCell(preRunTotal string) error {
 
 	preRunFloat, err := strconv.ParseFloat(preRunTotal, 64)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	totalValue, err := getTotalValueCell()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	difference = totalValue - preRunFloat
@@ -711,12 +743,12 @@ func updateDifferenceCell(preRunTotal string) error {
 	values = append(values, differenceStr)
 
 	if err := spreadsheets.WriteSingleEntryToTable(differenceCell, values); err != nil {
-		return err
+		return 0, err
 	}
 
 	logging.LogSuccess("Successfully updated difference cell")
 
-	return nil
+	return difference, nil
 }
 
 // Function gets the total value (which we updated).

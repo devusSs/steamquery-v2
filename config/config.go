@@ -23,14 +23,15 @@ type OrgCells struct {
 }
 
 type WatchDog struct {
-	RetryInterval      int    `json:"retry_interval"`
-	SteamRetryInterval int    `json:"steam_retry_interval"`
-	SMTPHost           string `json:"smtp_host"`
-	SMTPPort           int    `json:"smtp_port"`
-	SMTPUser           string `json:"smtp_user"`
-	SMTPPassword       string `json:"smtp_password"`
-	SMTPFrom           string `json:"smtp_from"`
-	SMTPTo             string `json:"smtp_to"`
+	RetryInterval      int     `json:"retry_interval"`
+	SteamRetryInterval int     `json:"steam_retry_interval"`
+	MaxPriceDrop       float64 `json:"max_price_drop"`
+	SMTPHost           string  `json:"smtp_host"`
+	SMTPPort           int     `json:"smtp_port"`
+	SMTPUser           string  `json:"smtp_user"`
+	SMTPPassword       string  `json:"smtp_password"`
+	SMTPFrom           string  `json:"smtp_from"`
+	SMTPTo             string  `json:"smtp_to"`
 }
 
 type Config struct {

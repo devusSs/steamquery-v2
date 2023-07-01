@@ -19,6 +19,7 @@
   "watch_dog": {
     "retry_interval": 0,
     "steam_retry_interval": 0,
+    "max_price_drop": 20.55,
     "smtp_host": "",
     "smtp_port": 0,
     "smtp_user": "",
