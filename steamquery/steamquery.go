@@ -196,7 +196,10 @@ func main() {
 			}
 		}
 
-		if priceDifference > maxPriceDifference {
+		logging.LogDebug(fmt.Sprintf("MAX PRICE DIFF: %.2f", maxPriceDifference*-1))
+		logging.LogDebug(fmt.Sprintf("OUR PRICE DIFF: %.2f", priceDifference))
+
+		if priceDifference < (maxPriceDifference * -1) {
 			mailData := utils.EmailData{}
 			mailData.Subject = "steamquery-v2 price drop alert"
 			mailData.Data = fmt.Sprintf(
