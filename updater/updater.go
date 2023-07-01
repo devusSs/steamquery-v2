@@ -8,11 +8,14 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
 
+	"github.com/devusSs/steamquery-v2/logging"
 	"github.com/devusSs/steamquery-v2/types"
+	"github.com/devusSs/steamquery-v2/utils"
 )
 
 const (
@@ -70,7 +73,7 @@ func CheckMinVersion() error {
 		return err
 	}
 
-	minVersion, err := semver.NewVersion("v1.1.2")
+	minVersion, err := semver.NewVersion("v1.1.3")
 	if err != nil {
 		return err
 	}
@@ -79,11 +82,51 @@ func CheckMinVersion() error {
 		return fmt.Errorf(
 			"unsupported version (%s), please update to at least (%s)",
 			BuildVersion,
-			"v1.1.2",
+			"v1.1.3",
 		)
 	}
 
 	return nil
+}
+
+// Function for watchdog mode to notify user for potentially new version.
+func PeriodicUpdateCheck(stopCheck chan bool) {
+	logging.LogInfo("Setup periodic update checking, every 6 hours")
+
+	interval := time.NewTicker(6 * time.Hour)
+
+	for {
+		select {
+		case <-interval.C:
+			_, newVersion, changelog, err := findLatestReleaseURL()
+			if err != nil {
+				logging.LogFatal(err.Error())
+			}
+
+			newVersionAvailable, err := newerVersionAvailable(newVersion)
+			if err != nil {
+				logging.LogFatal(err.Error())
+			}
+
+			if newVersionAvailable {
+				mailData := utils.EmailData{}
+				mailData.Subject = "steamquery-v2 new version available"
+				mailData.Data = fmt.Sprintf(
+					"A new version of steamquery-v2 is available.\n\nVersion: %s\n\nChangelog: %s\n\nTimestamp: %s",
+					newVersion,
+					changelog,
+					time.Now().Local().String(),
+				)
+				if err := utils.SendMail(&mailData); err != nil {
+					logging.LogFatal(err.Error())
+				}
+			}
+		case <-stopCheck:
+			interval.Stop()
+			logging.LogDebug("Stopping periodic update check")
+			return
+		}
+	}
 }
 
 // Queries the latest release from Github repo.
