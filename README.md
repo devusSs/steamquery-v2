@@ -54,7 +54,14 @@ For that example you would set following variables in your config:
     "smtp_user": "",
     "smtp_password": "",
     "smtp_from": "",
-    "smtp_to": ""
+    "smtp_to": "",
+    "postgres": {
+      "host": "",
+      "port": 0,
+      "user": "",
+      "password": "",
+      "database": ""
+    }
   }
 }
 ```
@@ -100,10 +107,11 @@ You can get your SteamID64 on different websites, for example [here](https://ste
 While it is technically prossible to query the Steam inventories via the official API and count the items programmatically, it is not possible to look into storage units which many people use to store their cases and capsules.<br/>
 As long as that is not possible you will need to count your items manually.
 
-## Why do I need to enter SMTP values and an e-mail?
+## Why do I need to enter SMTP values, an e-mail and Postgres values?
 
 To run the app manually when wanted you will not need to enter SMTP details. If you do however want to use the watchdog mode (-w flag) you will need to specify SMTP details.<br/>
-The app will then send you an e-mail whenever a run fails. This is intended to keep track of your app status when running the app in watchdog mode (for example on a server).
+The app will then send you an e-mail whenever a run fails. This is intended to keep track of your app status when running the app in watchdog mode (for example on a server).<br/>
+Postgres will be needed to store and read statistics to generate a price history for your items.
 
 ## Why do I need to run the program manually?
 

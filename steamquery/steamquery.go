@@ -13,6 +13,7 @@ import (
 	"github.com/devusSs/steamquery-v2/config"
 	"github.com/devusSs/steamquery-v2/logging"
 	"github.com/devusSs/steamquery-v2/query"
+	"github.com/devusSs/steamquery-v2/statistics"
 	"github.com/devusSs/steamquery-v2/system"
 	"github.com/devusSs/steamquery-v2/tables"
 	"github.com/devusSs/steamquery-v2/updater"
@@ -129,6 +130,14 @@ func main() {
 	)
 
 	if *watchDog {
+		logging.LogInfo("Running statistics setup, please wait")
+
+		if err := statistics.SetupStatistics(&cfg.WatchDog.Postgres, *logDirFlag); err != nil {
+			logging.LogFatal(err.Error())
+		}
+
+		logging.LogSuccess("Done with statistics setup")
+
 		maxPriceDifference = cfg.WatchDog.MaxPriceDrop
 
 		logging.LogWarning("Running app in watchdog mode")
@@ -158,7 +167,7 @@ func main() {
 		stopRerun := make(chan bool)
 
 		// Run the app once and the on every tick.
-		priceDifference, err := query.RunQuery(cfg.WatchDog.SteamRetryInterval)
+		priceDifference, err := query.RunQuery(cfg.WatchDog.SteamRetryInterval, *watchDog)
 		if err != nil {
 			if strings.Contains(err.Error(), "last run has been less than 3 minutes ago") {
 				logging.LogFatal(err.Error())
@@ -227,7 +236,10 @@ func main() {
 					return
 				case <-rerunticker.C:
 					if !query.QueryRunning {
-						priceDifference, err := query.RunQuery(cfg.WatchDog.SteamRetryInterval)
+						priceDifference, err := query.RunQuery(
+							cfg.WatchDog.SteamRetryInterval,
+							*watchDog,
+						)
 						if err != nil {
 							if err := query.WriteErrorCell(fmt.Errorf("%s (TS: %s)", err.Error(), time.Now().Local().Format("2006-01-02 15:04:05 CEST"))); err != nil {
 								logging.LogFatal(err.Error())
@@ -276,8 +288,12 @@ func main() {
 		rerunticker.Stop()
 		stopRerun <- true
 		stopUpdatesCheck <- true
+
+		if err := statistics.CloseStatistics(); err != nil {
+			logging.LogFatal(err.Error())
+		}
 	} else {
-		if _, err := query.RunQuery(cfg.WatchDog.SteamRetryInterval); err != nil {
+		if _, err := query.RunQuery(cfg.WatchDog.SteamRetryInterval, *watchDog); err != nil {
 			if strings.Contains(err.Error(), "last run has been less than 3 minutes ago") {
 				logging.LogFatal(err.Error())
 			}

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -80,9 +82,19 @@ func (p *psql) VerifyVersion() error {
 		return err
 	}
 
-	// TODO: use regex or strings functions to query raw version string
-	// If version < 14 throw error.
-	log.Println("PG VERSION HERE:", version)
+	versionRaw := strings.Split(version, " ")[1]
+	versionConv, err := strconv.ParseFloat(versionRaw, 64)
+	if err != nil {
+		return err
+	}
+
+	if versionConv < 13 {
+		return fmt.Errorf(
+			"unsupported min postgres version; want at least %d ; got %.2f",
+			13,
+			versionConv,
+		)
+	}
 
 	return nil
 }

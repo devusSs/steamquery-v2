@@ -9,11 +9,14 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	_ "time/tzdata"
 
 	"github.com/devusSs/steamquery-v2/config"
 	"github.com/devusSs/steamquery-v2/logging"
+	"github.com/devusSs/steamquery-v2/statistics"
+	"github.com/devusSs/steamquery-v2/statistics/database"
 	"github.com/devusSs/steamquery-v2/steam"
 	"github.com/devusSs/steamquery-v2/system"
 	"github.com/devusSs/steamquery-v2/tables"
@@ -86,7 +89,7 @@ func InitQuery(
 	steamUser64 = steamUserID64
 }
 
-func RunQuery(steamRetryInterval int) (float64, error) {
+func RunQuery(steamRetryInterval int, watchdog bool) (float64, error) {
 	QueryRunning = true
 
 	steamUp, err := steam.IsSteamCSGOAPIUp(steamAPIKey)
@@ -98,7 +101,7 @@ func RunQuery(steamRetryInterval int) (float64, error) {
 		if steamRetryInterval != 0 {
 			logging.LogInfo(fmt.Sprintf("Rerunning steamquery in %d minutes", steamRetryInterval))
 			time.Sleep(time.Duration(steamRetryInterval) * time.Minute)
-			return RunQuery(steamRetryInterval)
+			return RunQuery(steamRetryInterval, watchdog)
 		}
 
 		return 0, errors.New("steam down, retry later")
@@ -162,6 +165,28 @@ func RunQuery(steamRetryInterval int) (float64, error) {
 		return 0, err
 	}
 
+	wg := sync.WaitGroup{}
+	if watchdog {
+		go func() {
+			for item, price := range priceMap {
+				wg.Add(1)
+				convertedPrice, err := strconv.ParseFloat(
+					strings.ReplaceAll(strings.ReplaceAll(price, "€", ""), ",", "."),
+					64,
+				)
+				if err != nil {
+					logging.LogError(fmt.Sprintf("STATS ERROR: %s", err.Error()))
+				}
+
+				if err := statistics.AddStatistics(&database.SteamQueryV2Values{ItemName: item, Price: convertedPrice}); err != nil {
+					logging.LogError(fmt.Sprintf("STATS ERROR: %s", err.Error()))
+				}
+				wg.Done()
+				logging.LogDebug(fmt.Sprintf("Added statistics for %s", item))
+			}
+		}()
+	}
+
 	if err := writePricesForItemMap(itemList, priceMap); err != nil {
 		return 0, err
 	}
@@ -192,6 +217,8 @@ func RunQuery(steamRetryInterval int) (float64, error) {
 	if err := writeLastUpdatedCell(); err != nil {
 		return 0, err
 	}
+
+	wg.Wait()
 
 	QueryRunning = false
 
