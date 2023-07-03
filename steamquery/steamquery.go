@@ -183,7 +183,7 @@ func main() {
 			mailData := utils.EmailData{}
 			mailData.Subject = "steamquery-v2 run failed"
 			mailData.Data = fmt.Sprintf(
-				"Your last steamquery-v2 run failed.\n\nError: %s\n\nTimestamp: %s",
+				"Your last steamquery-v2 run failed.<br>Error: %s<br>Timestamp: %s",
 				err.Error(),
 				time.Now().Local().String(),
 			)
@@ -203,7 +203,7 @@ func main() {
 			mailData := utils.EmailData{}
 			mailData.Subject = "steamquery-v2 price drop alert"
 			mailData.Data = fmt.Sprintf(
-				"Since your last steamquery-v2 run prices dropped a lot.\n\nDrop value: %.2f€\n\nTimestamp: %s",
+				"Since your last steamquery-v2 run prices dropped a lot.<br>Drop value: %.2f€<br>Timestamp: %s",
 				priceDifference,
 				time.Now().Local().String(),
 			)
@@ -236,7 +236,7 @@ func main() {
 							mailData := utils.EmailData{}
 							mailData.Subject = "steamquery-v2 run failed"
 							mailData.Data = fmt.Sprintf(
-								"Your last steamquery-v2 run failed.\nError: %s\nTimestamp: %s",
+								"Your last steamquery-v2 run failed.<br>Error: %s<br>Timestamp: %s",
 								err.Error(),
 								time.Now().Local().String(),
 							)
@@ -245,11 +245,11 @@ func main() {
 							}
 						}
 
-						if priceDifference > maxPriceDifference {
+						if priceDifference < (maxPriceDifference * -1) {
 							mailData := utils.EmailData{}
 							mailData.Subject = "steamquery-v2 price drop alert"
 							mailData.Data = fmt.Sprintf(
-								"Since your last steamquery-v2 run prices dropped a lot.\n\nDrop value: %.2f€\n\nTimestamp: %s",
+								"Since your last steamquery-v2 run prices dropped a lot.<br>Drop value: %.2f€<br>Timestamp: %s",
 								priceDifference,
 								time.Now().Local().String(),
 							)

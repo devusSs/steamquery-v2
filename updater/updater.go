@@ -112,7 +112,7 @@ func PeriodicUpdateCheck(stopCheck chan bool) {
 				mailData := utils.EmailData{}
 				mailData.Subject = "steamquery-v2 new version available"
 				mailData.Data = fmt.Sprintf(
-					"A new version of steamquery-v2 is available.\n\nVersion: %s\n\nChangelog: %s\n\nTimestamp: %s",
+					"A new version of steamquery-v2 is available.<br>Version: %s<br>Changelog: %s<br>Timestamp: %s",
 					newVersion,
 					changelog,
 					time.Now().Local().String(),

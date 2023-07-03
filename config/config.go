@@ -22,16 +22,25 @@ type OrgCells struct {
 	DifferenceCell  string `json:"difference_cell"`
 }
 
+type Postgres struct {
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	User     string `json:"user"`
+	Password string `json:"password"`
+	Database string `json:"database"`
+}
+
 type WatchDog struct {
-	RetryInterval      int     `json:"retry_interval"`
-	SteamRetryInterval int     `json:"steam_retry_interval"`
-	MaxPriceDrop       float64 `json:"max_price_drop"`
-	SMTPHost           string  `json:"smtp_host"`
-	SMTPPort           int     `json:"smtp_port"`
-	SMTPUser           string  `json:"smtp_user"`
-	SMTPPassword       string  `json:"smtp_password"`
-	SMTPFrom           string  `json:"smtp_from"`
-	SMTPTo             string  `json:"smtp_to"`
+	RetryInterval      int      `json:"retry_interval"`
+	SteamRetryInterval int      `json:"steam_retry_interval"`
+	MaxPriceDrop       float64  `json:"max_price_drop"`
+	SMTPHost           string   `json:"smtp_host"`
+	SMTPPort           int      `json:"smtp_port"`
+	SMTPUser           string   `json:"smtp_user"`
+	SMTPPassword       string   `json:"smtp_password"`
+	SMTPFrom           string   `json:"smtp_from"`
+	SMTPTo             string   `json:"smtp_to"`
+	Postgres           Postgres `json:"postgres"`
 }
 
 type Config struct {
@@ -155,6 +164,26 @@ func (c *Config) CheckConfig(watchDog bool) error {
 
 		if c.WatchDog.SMTPTo == "" {
 			return errors.New("missing smtp to in config")
+		}
+
+		if c.WatchDog.Postgres.Host == "" {
+			return errors.New("missing postgres host in config")
+		}
+
+		if c.WatchDog.Postgres.Port == 0 {
+			return errors.New("missing postgres port in config")
+		}
+
+		if c.WatchDog.Postgres.User == "" {
+			return errors.New("missing postgres user in config")
+		}
+
+		if c.WatchDog.Postgres.Password == "" {
+			return errors.New("missing postgres password in config")
+		}
+
+		if c.WatchDog.Postgres.Database == "" {
+			return errors.New("missing postgres database in config")
 		}
 
 		if err := utils.ValidateMail(c.WatchDog.SMTPFrom); err != nil {

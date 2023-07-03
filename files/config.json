@@ -25,6 +25,13 @@
     "smtp_user": "",
     "smtp_password": "",
     "smtp_from": "",
-    "smtp_to": ""
+    "smtp_to": "",
+    "postgres": {
+      "host": "",
+      "port": 0,
+      "user": "",
+      "password": "",
+      "database": ""
+    }
   }
 }
