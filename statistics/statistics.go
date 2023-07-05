@@ -124,7 +124,7 @@ func StartStatsAnalysis(cfg *config.Postgres, logsDir string) {
 
 	fmt.Println("")
 	fmt.Println(
-		"Enter the item name you'd like to analyse, leave blank to analyse all (might take some time)",
+		"Enter the item names seperated by commas you'd like to analyse, leave blank to analyse all (might take some time)",
 	)
 	fmt.Print("-> ")
 	text, err := reader.ReadString('\n')
@@ -137,7 +137,7 @@ func StartStatsAnalysis(cfg *config.Postgres, logsDir string) {
 	}
 	text = strings.ReplaceAll(text, "\n", "")
 
-	itemName := text
+	itemNames := strings.Split(text, ",")
 
 	fmt.Println("")
 	fmt.Println("Enter the date range you'd like to analyse, leave blank for past 30d (max)")
@@ -157,8 +157,12 @@ func StartStatsAnalysis(cfg *config.Postgres, logsDir string) {
 
 	dateRange := text
 
-	if itemName == "" {
-		itemName = "all"
+	var itemNamesFinal []string
+
+	itemNamesFinal = itemNames
+
+	if len(itemNames) == 0 || len(itemNames) == 1 {
+		itemNamesFinal = append(itemNamesFinal, "all")
 	}
 
 	if dateRange == "" {
@@ -167,8 +171,11 @@ func StartStatsAnalysis(cfg *config.Postgres, logsDir string) {
 
 	fmt.Println("")
 	fmt.Println("Following inputs will be analysed:")
-	fmt.Printf("Item name: %s\n", itemName)
+	fmt.Printf("Item names: %s\n", strings.Join(itemNamesFinal, ", "))
 	fmt.Printf("Date range: %s\n", dateRange)
+
+	logging.LogDebug(fmt.Sprintf("item names: %v", itemNamesFinal))
+	logging.LogDebug(fmt.Sprintf("date range: %v", dateRange))
 
 	fmt.Println("")
 	fmt.Println("Are these inputs correct (y/n)?")
@@ -186,7 +193,7 @@ func StartStatsAnalysis(cfg *config.Postgres, logsDir string) {
 	switch text {
 	case "y":
 		fmt.Println("")
-		if err := performAnalysis(itemName, dateRange, logsDir); err != nil {
+		if err := performAnalysis(itemNamesFinal, dateRange, logsDir); err != nil {
 			logging.LogError(err.Error())
 			if err := exitStats(); err != nil {
 				logging.LogFatal(err.Error())
@@ -228,41 +235,42 @@ func checkDatabase() error {
 	return nil
 }
 
-func performAnalysis(itemName, dateRange, logsDir string) error {
+func performAnalysis(itemNames []string, dateRange, logsDir string) error {
 	var results []*database.SteamQueryV2Values
 	var err error
 	writeDir := fmt.Sprintf("%s/%s", logsDir, analysisDir)
 
-	switch itemName {
-	case "all":
+	if sliceItemExists(itemNames, "all") {
+		logging.LogWarning("Fetching all items, this will result in a cluttered chart")
 		switch dateRange {
 		case "all time":
-			logging.LogWarning(
-				"Fetching all items over all time, this will result in a cluttered chart",
-			)
 			results, err = service.GetValues()
 			if err != nil {
 				return err
 			}
-		default:
-			logging.LogWarning("Fetching all items, this will result in a cluttered chart")
 
+			for _, result := range results {
+				logging.LogDebug(fmt.Sprintf("%v", result.Created))
+			}
+		default:
 			var startTime time.Time
 			var endTime time.Time
 
-			endTime = time.Now().Local()
+			endTime = time.Now()
 
 			unit, amount, err := convertDateRange(dateRange)
 			if err != nil {
 				return err
 			}
 
+			logging.LogDebug(fmt.Sprintf("unit: %s ; amount: %d", unit, amount))
+
 			if unit == "h" {
 				startTime = endTime.Add(-time.Duration(amount) * time.Hour)
 			}
 
 			if unit == "d" {
-				startTime = endTime.AddDate(0, 0, amount)
+				startTime = endTime.AddDate(0, 0, -amount)
 			}
 
 			results, err = service.GetValuesByDate(startTime, endTime)
@@ -270,35 +278,45 @@ func performAnalysis(itemName, dateRange, logsDir string) error {
 				return err
 			}
 		}
-	default:
+	} else {
 		switch dateRange {
 		case "all time":
-			results, err = service.GetValuesByItemName(itemName)
-			if err != nil {
-				return err
+			for _, item := range itemNames {
+				resultsInst, err := service.GetValuesByItemName(item)
+				if err != nil {
+					return err
+				}
+
+				results = append(results, resultsInst...)
 			}
 		default:
 			var startTime time.Time
 			var endTime time.Time
 
-			endTime = time.Now().Local()
+			endTime = time.Now()
 
 			unit, amount, err := convertDateRange(dateRange)
 			if err != nil {
 				return err
 			}
 
+			logging.LogDebug(fmt.Sprintf("unit: %s ; amount: %d", unit, amount))
+
 			if unit == "h" {
 				startTime = endTime.Add(-time.Duration(amount) * time.Hour)
 			}
 
 			if unit == "d" {
-				startTime = endTime.AddDate(0, 0, amount)
+				startTime = endTime.AddDate(0, 0, -amount)
 			}
 
-			results, err = service.GetValuesByItemNameAndDate(itemName, startTime, endTime)
-			if err != nil {
-				return err
+			for _, item := range itemNames {
+				resultsInst, err := service.GetValuesByItemNameAndDate(item, startTime, endTime)
+				if err != nil {
+					return err
+				}
+
+				results = append(results, resultsInst...)
 			}
 		}
 	}
@@ -336,8 +354,8 @@ func generateChart(results []*database.SteamQueryV2Values) (*charts.Line, error)
 	prices := make(map[string][]float64)
 
 	for _, result := range results {
-		if !sliceItemExists(dateRange, result.CreatedAt.Format("2006-01-02 15:04:05")) {
-			dateRange = append(dateRange, result.CreatedAt.Format("2006-01-02 15:04:05"))
+		if !sliceItemExists(dateRange, result.Created.Format("2006-01-02 15:04:05")) {
+			dateRange = append(dateRange, result.Created.Format("2006-01-02 15:04:05"))
 		}
 		prices[result.ItemName] = append(prices[result.ItemName], result.Price)
 	}
@@ -355,18 +373,6 @@ func generateChart(results []*database.SteamQueryV2Values) (*charts.Line, error)
 			Width:     "1000px",
 			Height:    "800px",
 		}),
-		/*
-			charts.WithTitleOpts(opts.Title{
-				Title: "Item prices over time",
-				Subtitle: fmt.Sprintf(
-					"Start date: %s\nEnd date:  %s",
-					dateRange[0],
-					dateRange[len(dateRange)-1],
-				),
-				Top:    "5%",
-				Bottom: "5%",
-			}),
-		*/
 		charts.WithXAxisOpts(opts.XAxis{Name: "Datetime"}),
 		charts.WithYAxisOpts(opts.YAxis{Name: "Price in €"}),
 		charts.WithLegendOpts(opts.Legend{
@@ -412,7 +418,7 @@ func convertDateRange(input string) (string, int, error) {
 		if err != nil {
 			return "", 0, err
 		}
-		return "h", int(convertInt), nil
+		return "d", int(convertInt), nil
 	}
 
 	return "", 0, fmt.Errorf("unsupported specifier, supported: %s and %s", "h", "d")

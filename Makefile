@@ -107,7 +107,7 @@ stats: build
 	@mkdir ./testing/files
 	@cp -R ./files ./testing
 	@cp ./release/steamquery_$(BUILD_OS)_$(BUILD_ARCH)/steamquery ./testing
-	@cd ./testing && ./steamquery -c "./files/config.dev.json" -z -d
+	@cd ./testing && ./steamquery -c "./files/config.dev.json" -z -d -du
 
 # DO NOT CHANGE.
 clean:

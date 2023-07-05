@@ -178,7 +178,7 @@ func RunQuery(steamRetryInterval int, watchdog bool) (float64, error) {
 					logging.LogError(fmt.Sprintf("STATS ERROR: %s", err.Error()))
 				}
 
-				if err := statistics.AddStatistics(&database.SteamQueryV2Values{ItemName: item, Price: convertedPrice}); err != nil {
+				if err := statistics.AddStatistics(&database.SteamQueryV2Values{ItemName: item, Price: convertedPrice, Created: time.Now()}); err != nil {
 					logging.LogError(fmt.Sprintf("STATS ERROR: %s", err.Error()))
 				}
 				wg.Done()
@@ -495,7 +495,13 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 
 		itemsFetched++
 
-		logging.LogDebug(fmt.Sprintf("Done fetching price for: \t%s", item))
+		logging.LogDebug(
+			fmt.Sprintf(
+				"Done fetching price for: \t%s (price: %s)",
+				item,
+				itemMarketResponse.LowestPrice,
+			),
+		)
 	}
 
 	logging.LogDebug(fmt.Sprintf("Item prices post fetch: %v", priceMap))

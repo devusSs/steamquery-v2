@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -49,48 +50,20 @@ func InitClearFunc() {
 func CheckAlreadyRunning(watchdog bool) error {
 	processName := "steamquery-v2"
 
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
+	switch os := runtime.GOOS; os {
 	case "windows":
-		cmd = exec.Command("tasklist", "/fo", "csv", "/nh")
-	case "darwin":
-		cmd = exec.Command("pgrep", "-f", processName)
-	case "linux":
-		cmd = exec.Command("pgrep", "-f", processName)
+		if processExists(processName + ".exe") {
+			return errors.New("program already running")
+		}
+	case "linux", "darwin":
+		if processExists(processName) {
+			return errors.New("program already running")
+		}
 	default:
 		return errors.New("unsupported os")
 	}
 
-	err := cmd.Run()
-	if err != nil {
-		if strings.Contains(err.Error(), "exit status 1") {
-			return nil
-		}
-
-		return err
-	}
-
-	if runtime.GOOS == "windows" {
-		if strings.Contains(cmd.String(), processName) {
-			if !watchdog {
-				return errors.New("program already running")
-			} else {
-				return nil
-			}
-		} else {
-			return nil
-		}
-	} else {
-		if len(cmd.String()) > 0 {
-			if !watchdog {
-				return errors.New("program already running")
-			} else {
-				return nil
-			}
-		} else {
-			return nil
-		}
-	}
+	return nil
 }
 
 func GetUserAgentHeaderFromOS() string {
@@ -297,4 +270,29 @@ func loadAndCheckConfig(cfg string) error {
 	fmt.Printf("%s Successfully checked config\n", logging.SucSign)
 
 	return nil
+}
+
+func processExists(processName string) bool {
+	pid := os.Getpid()
+
+	cmd := exec.Command("pgrep", "-f", processName)
+	output, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			if exitErr.Sys().(syscall.WaitStatus).ExitStatus() == 1 {
+				return false
+			}
+		}
+		log.Fatal(err)
+	}
+
+	pids := strings.Fields(string(output))
+	for _, pidStr := range pids {
+		if pidStr == fmt.Sprintf("%d", pid) {
+			continue
+		}
+		return true
+	}
+
+	return false
 }

@@ -103,7 +103,7 @@ func (p *psql) Migrate() error {
 func (p *psql) DeleteOldValues() error {
 	oldValuesTreshhold := time.Now().AddDate(0, 0, -30)
 	logging.LogDebug(fmt.Sprintf("Deleting database values older than %v", oldValuesTreshhold))
-	tx := p.db.Where("created_at < ?", oldValuesTreshhold).Delete(&database.SteamQueryV2Values{})
+	tx := p.db.Where("created < ?", oldValuesTreshhold).Delete(&database.SteamQueryV2Values{})
 	logging.LogDebug(fmt.Sprintf("OLD VALUES AFFECTED: %d", tx.RowsAffected))
 	return tx.Error
 }
@@ -134,9 +134,12 @@ func (p *psql) GetValuesByDate(
 	startTime time.Time,
 	endTime time.Time,
 ) ([]*database.SteamQueryV2Values, error) {
+	logging.LogDebug(
+		fmt.Sprintf("start: %v ; end: %v", startTime.In(time.UTC), endTime.In(time.UTC)),
+	)
 	var returns []*database.SteamQueryV2Values
 	tx := p.db.
-		Where("created_at between ? and ?", startTime, endTime).
+		Where("created >= ? AND created <= ?", startTime.In(time.UTC), endTime.In(time.UTC)).
 		Find(&returns)
 	return returns, tx.Error
 }
@@ -154,10 +157,13 @@ func (p *psql) GetValuesByItemNameAndDate(
 	startTime time.Time,
 	endTime time.Time,
 ) ([]*database.SteamQueryV2Values, error) {
+	logging.LogDebug(
+		fmt.Sprintf("start: %v ; end: %v", startTime.In(time.UTC), endTime.In(time.UTC)),
+	)
 	var returns []*database.SteamQueryV2Values
 	tx := p.db.
 		Where("item_name = ?", name).
-		Where("created_at between ? and ?", startTime, endTime).
+		Where("created >= ? AND created <= ?", startTime.In(time.UTC), endTime.In(time.UTC)).
 		Find(&returns)
 	return returns, tx.Error
 }

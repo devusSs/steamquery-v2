@@ -20,9 +20,9 @@ type Service interface {
 }
 
 type SteamQueryV2Values struct {
-	ID        uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	CreatedAt time.Time
+	ID uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
 
 	ItemName string
 	Price    float64
+	Created  time.Time
 }
