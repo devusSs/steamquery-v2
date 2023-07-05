@@ -73,7 +73,7 @@ func CheckMinVersion() error {
 		return err
 	}
 
-	minVersion, err := semver.NewVersion("v1.1.9")
+	minVersion, err := semver.NewVersion("v1.2.0")
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func CheckMinVersion() error {
 		return fmt.Errorf(
 			"unsupported version (%s), please update to at least (%s)",
 			BuildVersion,
-			"v1.1.9",
+			"v1.2.0",
 		)
 	}
 
