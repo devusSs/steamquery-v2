@@ -38,7 +38,12 @@ func main() {
 	skipChecks := flag.Bool("sc", false, "skips last updated and error cell checks on sheets")
 	betaFeatures := flag.Bool("b", false, "enables beta features, not recommended")
 	watchDog := flag.Bool("w", false, "enables watchdog mode with specified interval")
+	analysisFlag := flag.Bool("z", false, "performs data analysis for prices and exits")
 	flag.Parse()
+
+	if err := system.CheckAlreadyRunning(*watchDog); err != nil {
+		log.Fatal(err)
+	}
 
 	if *analysisModeFlag {
 		if err := system.RunAnalysisMode(*logDirFlag, *cfgPathFlag, *gCloudPathFlag); err != nil {
@@ -73,6 +78,21 @@ func main() {
 		if err := logging.InitLoggers("release"); err != nil {
 			log.Fatalf("Error initiating loggers: %s\n", err.Error())
 		}
+	}
+
+	if *analysisFlag {
+		cfg, err := config.LoadConfig(*cfgPathFlag)
+		if err != nil {
+			logging.LogFatal(err.Error())
+		}
+
+		if err := cfg.CheckConfig(true); err != nil {
+			logging.LogFatal(err.Error())
+		}
+
+		statistics.StartStatsAnalysis(&cfg.WatchDog.Postgres, *logDirFlag)
+
+		return
 	}
 
 	if *versionFlag {

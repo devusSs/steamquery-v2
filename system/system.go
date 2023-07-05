@@ -46,6 +46,53 @@ func InitClearFunc() {
 	}
 }
 
+func CheckAlreadyRunning(watchdog bool) error {
+	processName := "steamquery-v2"
+
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("tasklist", "/fo", "csv", "/nh")
+	case "darwin":
+		cmd = exec.Command("pgrep", "-f", processName)
+	case "linux":
+		cmd = exec.Command("pgrep", "-f", processName)
+	default:
+		return errors.New("unsupported os")
+	}
+
+	err := cmd.Run()
+	if err != nil {
+		if strings.Contains(err.Error(), "exit status 1") {
+			return nil
+		}
+
+		return err
+	}
+
+	if runtime.GOOS == "windows" {
+		if strings.Contains(cmd.String(), processName) {
+			if !watchdog {
+				return errors.New("program already running")
+			} else {
+				return nil
+			}
+		} else {
+			return nil
+		}
+	} else {
+		if len(cmd.String()) > 0 {
+			if !watchdog {
+				return errors.New("program already running")
+			} else {
+				return nil
+			}
+		} else {
+			return nil
+		}
+	}
+}
+
 func GetUserAgentHeaderFromOS() string {
 	switch strings.ToLower(runtime.GOOS) {
 	case "windows":

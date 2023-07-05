@@ -13,14 +13,11 @@ import (
 	"gorm.io/gorm/logger"
 
 	"github.com/devusSs/steamquery-v2/config"
+	"github.com/devusSs/steamquery-v2/logging"
 	"github.com/devusSs/steamquery-v2/statistics/database"
 )
 
-var (
-	logFile *os.File
-	// Treshhold for old values, delete them when older than 30 days.
-	oldValuesTreshhold = time.Now().AddDate(0, 0, 30)
-)
+var logFile *os.File
 
 type psql struct {
 	db *gorm.DB
@@ -104,7 +101,10 @@ func (p *psql) Migrate() error {
 }
 
 func (p *psql) DeleteOldValues() error {
+	oldValuesTreshhold := time.Now().AddDate(0, 0, -30)
+	logging.LogDebug(fmt.Sprintf("Deleting database values older than %v", oldValuesTreshhold))
 	tx := p.db.Where("created_at < ?", oldValuesTreshhold).Delete(&database.SteamQueryV2Values{})
+	logging.LogDebug(fmt.Sprintf("OLD VALUES AFFECTED: %d", tx.RowsAffected))
 	return tx.Error
 }
 
@@ -126,7 +126,7 @@ func (p *psql) AddValues(values *database.SteamQueryV2Values) error {
 
 func (p *psql) GetValues() ([]*database.SteamQueryV2Values, error) {
 	var returns []*database.SteamQueryV2Values
-	tx := p.db.Order("created_at desc").Find(&returns)
+	tx := p.db.Find(&returns)
 	return returns, tx.Error
 }
 
@@ -135,7 +135,7 @@ func (p *psql) GetValuesByDate(
 	endTime time.Time,
 ) ([]*database.SteamQueryV2Values, error) {
 	var returns []*database.SteamQueryV2Values
-	tx := p.db.Order("created_at desc").
+	tx := p.db.
 		Where("created_at between ? and ?", startTime, endTime).
 		Find(&returns)
 	return returns, tx.Error
@@ -145,7 +145,7 @@ func (p *psql) GetValuesByItemName(
 	name string,
 ) ([]*database.SteamQueryV2Values, error) {
 	var returns []*database.SteamQueryV2Values
-	tx := p.db.Order("created_at desc").Where("item_name = ?", name).Find(&returns)
+	tx := p.db.Where("item_name = ?", name).Find(&returns)
 	return returns, tx.Error
 }
 
@@ -155,7 +155,7 @@ func (p *psql) GetValuesByItemNameAndDate(
 	endTime time.Time,
 ) ([]*database.SteamQueryV2Values, error) {
 	var returns []*database.SteamQueryV2Values
-	tx := p.db.Order("created_at desc").
+	tx := p.db.
 		Where("item_name = ?", name).
 		Where("created_at between ? and ?", startTime, endTime).
 		Find(&returns)

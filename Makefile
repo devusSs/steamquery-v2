@@ -87,7 +87,7 @@ version: build
 	@rm -rf ./testing
 	@mkdir ./testing
 	@cp ./release/steamquery_$(BUILD_OS)_$(BUILD_ARCH)/steamquery ./testing
-	@cd ./testing && ./steamquery -v -du
+	@cd ./testing && ./steamquery -v -du -d
 
 # DO NOT CHANGE.
 analysis: build
@@ -97,8 +97,17 @@ analysis: build
 	@mkdir ./testing/files
 	@cp -R ./files ./testing
 	@cp ./release/steamquery_$(BUILD_OS)_$(BUILD_ARCH)/steamquery ./testing
-	@cd ./testing && ./steamquery -c "./files/config.dev.json" -a -du
+	@cd ./testing && ./steamquery -c "./files/config.dev.json" -a -du -d
 
+# DO NOT CHANGE.
+stats: build
+	@clear
+	@rm -rf ./testing
+	@mkdir ./testing
+	@mkdir ./testing/files
+	@cp -R ./files ./testing
+	@cp ./release/steamquery_$(BUILD_OS)_$(BUILD_ARCH)/steamquery ./testing
+	@cd ./testing && ./steamquery -c "./files/config.dev.json" -z -d
 
 # DO NOT CHANGE.
 clean:

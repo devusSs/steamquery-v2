@@ -90,6 +90,7 @@ If you ever need more configuration options simply set them via flags:
 -sc to skip checks regarding last updated and error cell on Google Sheets
 -b  to enable and run beta features
 -w  to run the app in watchdog mode (automatic rerun after specified interval)
+-z  to run the app in statistics analysis mode (compares prices and creates chart)
 ```
 
 ## Why does this program need my Steam API key and my SteamID64?
