@@ -1,6 +1,5 @@
 config.dev.json
 gcloud.json
-cosign.key
 
 logs/
 debug/
