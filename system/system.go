@@ -48,6 +48,11 @@ func InitClearFunc() {
 }
 
 func CheckAlreadyRunning(watchdog bool) error {
+	sty := os.Getenv("STY")
+	if sty != "" {
+		return nil
+	}
+
 	processName := "steamquery-v2"
 
 	switch os := runtime.GOOS; os {
