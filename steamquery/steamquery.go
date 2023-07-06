@@ -245,6 +245,15 @@ func main() {
 			if err := utils.SendMail(&mailData); err != nil {
 				logging.LogFatal(err.Error())
 			}
+		} else {
+			mailData := utils.EmailData{}
+			mailData.Subject = "steamquery-v2 run summary"
+			mailData.Data = fmt.Sprintf(
+				"Your last steamquery-v2 run summary:<br>Price difference: %.2f€<br>Timestamp: %s",
+				priceDifference, time.Now().Local().String())
+			if err := utils.SendMail(&mailData); err != nil {
+				logging.LogFatal(err.Error())
+			}
 		}
 
 		logging.LogSuccess("Initial run completed")
@@ -291,6 +300,15 @@ func main() {
 								priceDifference,
 								time.Now().Local().String(),
 							)
+							if err := utils.SendMail(&mailData); err != nil {
+								logging.LogFatal(err.Error())
+							}
+						} else {
+							mailData := utils.EmailData{}
+							mailData.Subject = "steamquery-v2 run summary"
+							mailData.Data = fmt.Sprintf(
+								"Your last steamquery-v2 run summary:<br>Price difference: %.2f€<br>Timestamp: %s",
+								priceDifference, time.Now().Local().String())
 							if err := utils.SendMail(&mailData); err != nil {
 								logging.LogFatal(err.Error())
 							}
