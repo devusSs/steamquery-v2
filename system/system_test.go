@@ -22,13 +22,13 @@ func TestCheckAlreadyRunning(t *testing.T) {
 			t.Fatalf("CheckAlreadyRunning returned an error: %v", err)
 		}
 	}()
-	_, err = CheckAlreadyRunning(false)
+	_, err = CheckAlreadyRunning(false, false)
 	if err != nil {
 		t.Fatalf("CheckAlreadyRunning returned an error: %v", err)
 	}
 
 	os.Remove(lockFile)
-	_, err = CheckAlreadyRunning(false)
+	_, err = CheckAlreadyRunning(false, false)
 	if err != nil {
 		t.Fatalf("CheckAlreadyRunning returned an error: %v", err)
 	}

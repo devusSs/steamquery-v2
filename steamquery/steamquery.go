@@ -41,7 +41,7 @@ func main() {
 	analysisFlag := flag.Bool("z", false, "performs data analysis for prices and exits")
 	flag.Parse()
 
-	alreadyRunning, err := system.CheckAlreadyRunning(*watchDog)
+	alreadyRunning, err := system.CheckAlreadyRunning(*watchDog, *analysisFlag)
 	if err != nil {
 		log.Fatal(err)
 	}

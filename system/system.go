@@ -50,7 +50,7 @@ func InitClearFunc() {
 	}
 }
 
-func CheckAlreadyRunning(watchdog bool) (bool, error) {
+func CheckAlreadyRunning(watchdog, statsMode bool) (bool, error) {
 	// Ignore screen sessions.
 	if os.Getenv("STY") != "" {
 		return false, nil
@@ -69,7 +69,10 @@ func CheckAlreadyRunning(watchdog bool) (bool, error) {
 	}
 
 	if err := lock.TryLock(); err != nil {
-		return true, nil
+		if !watchdog && !statsMode {
+			return true, nil
+		}
+		return false, nil
 	}
 	defer func() {
 		if err := lock.Unlock(); err != nil {
