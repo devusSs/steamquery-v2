@@ -9,9 +9,12 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
+
+	"github.com/nightlyone/lockfile"
 
 	"github.com/devusSs/steamquery-v2/config"
 	"github.com/devusSs/steamquery-v2/logging"
@@ -47,28 +50,34 @@ func InitClearFunc() {
 	}
 }
 
-func CheckAlreadyRunning(watchdog bool) error {
-	sty := os.Getenv("STY")
-	if sty != "" {
-		return nil
+func CheckAlreadyRunning(watchdog bool) (bool, error) {
+	// Ignore screen sessions.
+	if os.Getenv("STY") != "" {
+		return false, nil
 	}
 
-	processName := "steamquery-v2"
-
-	switch os := runtime.GOOS; os {
-	case "windows":
-		if processExists(processName + ".exe") {
-			return errors.New("program already running")
-		}
-	case "linux", "darwin":
-		if processExists(processName) {
-			return errors.New("program already running")
-		}
-	default:
-		return errors.New("unsupported os")
+	executable, err := os.Executable()
+	if err != nil {
+		return false, err
 	}
 
-	return nil
+	lockFile := filepath.Join(os.TempDir(), filepath.Base(executable)+".lock")
+
+	lock, err := lockfile.New(lockFile)
+	if err != nil {
+		return false, err
+	}
+
+	if err := lock.TryLock(); err != nil {
+		return true, nil
+	}
+	defer func() {
+		if err := lock.Unlock(); err != nil {
+			log.Fatal("Error unlocking lock file:", err)
+		}
+	}()
+
+	return false, nil
 }
 
 func GetUserAgentHeaderFromOS() string {
@@ -275,29 +284,4 @@ func loadAndCheckConfig(cfg string) error {
 	fmt.Printf("%s Successfully checked config\n", logging.SucSign)
 
 	return nil
-}
-
-func processExists(processName string) bool {
-	pid := os.Getpid()
-
-	cmd := exec.Command("pgrep", "-f", processName)
-	output, err := cmd.Output()
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			if exitErr.Sys().(syscall.WaitStatus).ExitStatus() == 1 {
-				return false
-			}
-		}
-		log.Fatal(err)
-	}
-
-	pids := strings.Fields(string(output))
-	for _, pidStr := range pids {
-		if pidStr == fmt.Sprintf("%d", pid) {
-			continue
-		}
-		return true
-	}
-
-	return false
 }

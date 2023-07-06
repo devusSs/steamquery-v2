@@ -1,6 +1,7 @@
 package updater
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ var (
 	BuildDate      string
 	BuildMode      string
 	BuildVersion   string
+	BuildGitCommit string
 	buildArch      = runtime.GOARCH
 	buildOS        = runtime.GOOS
 	buildGoVersion = runtime.Version()
@@ -38,6 +40,7 @@ func PrintBuildInfo() {
 	fmt.Printf("Build OS: \t  %s\n", buildOS)
 	fmt.Printf("Build arch: \t  %s\n", buildArch)
 	fmt.Printf("Build GO version: %s\n", buildGoVersion)
+	fmt.Printf("Build Git commit: %s\n", BuildGitCommit)
 }
 
 func CheckForUpdatesAndApply() error {
@@ -73,7 +76,7 @@ func CheckMinVersion() error {
 		return err
 	}
 
-	minVersion, err := semver.NewVersion("v1.2.2")
+	minVersion, err := semver.NewVersion("v1.2.4")
 	if err != nil {
 		return err
 	}
@@ -82,7 +85,7 @@ func CheckMinVersion() error {
 		return fmt.Errorf(
 			"unsupported version (%s), please update to at least (%s)",
 			BuildVersion,
-			"v1.2.2",
+			"v1.2.4",
 		)
 	}
 
