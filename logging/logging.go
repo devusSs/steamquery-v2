@@ -20,6 +20,12 @@ var (
 	ErrSign   = color.RedString("[ERROR]")
 	SucSign   = color.GreenString("[SUCCESS]")
 
+	DebugSignNoColour = "[DEBUG]"
+	InfSignNoColour   = "[INFO]"
+	WarnSignNoColour  = "[WARN]"
+	ErrSignNoColour   = "[ERROR]"
+	SucSignNoColour   = "[SUCCESS]"
+
 	logLevel      string
 	logsDirectory string
 
@@ -73,7 +79,7 @@ func LogDebug(message string) {
 		consoleLogger.Printf("%s %s\n", DebugSign, message)
 	}
 	_, err := appLogger.Write(
-		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), InfSign, message)),
+		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), InfSignNoColour, message)),
 	)
 	if err != nil {
 		log.Println(err)
@@ -84,7 +90,7 @@ func LogInfo(message string) {
 	consoleLogger.Printf("%s %s\n", InfSign, message)
 
 	_, err := appLogger.Write(
-		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), InfSign, message)),
+		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), InfSignNoColour, message)),
 	)
 	if err != nil {
 		log.Println(err)
@@ -95,7 +101,7 @@ func LogWarning(message string) {
 	consoleLogger.Printf("%s %s\n", WarnSign, message)
 
 	_, err := appLogger.Write(
-		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), WarnSign, message)),
+		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), WarnSignNoColour, message)),
 	)
 	if err != nil {
 		log.Println(err)
@@ -106,7 +112,7 @@ func LogError(message string) {
 	consoleLogger.Printf("%s [non-critical] %s\n", ErrSign, message)
 
 	_, err := errorLogger.Write(
-		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), ErrSign, message)),
+		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), ErrSignNoColour, message)),
 	)
 	if err != nil {
 		log.Println(err)
@@ -117,7 +123,7 @@ func LogFatal(message string) {
 	consoleLogger.Printf("%s [critical] %s\n", ErrSign, message)
 
 	_, err := errorLogger.Write(
-		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), ErrSign, message)),
+		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), ErrSignNoColour, message)),
 	)
 	if err != nil {
 		log.Println(err)
@@ -130,7 +136,7 @@ func LogSuccess(message string) {
 	consoleLogger.Printf("%s %s\n", SucSign, message)
 
 	_, err := appLogger.Write(
-		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), SucSign, message)),
+		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), SucSignNoColour, message)),
 	)
 	if err != nil {
 		log.Println(err)
