@@ -56,6 +56,16 @@ dev: build
 	@cd ./testing && ./steamquery -c "./files/config.dev.json" -d -du -sc
 
 # DO NOT CHANGE.
+run: build
+	@clear
+	@rm -rf ./testing
+	@mkdir ./testing
+	@mkdir ./testing/files
+	@cp -R ./files ./testing
+	@cp ./release/steamquery_$(BUILD_OS)_$(BUILD_ARCH)/steamquery ./testing
+	@cd ./testing && ./steamquery -c "./files/config.dev.json" -d -du
+
+# DO NOT CHANGE.
 beta: build
 	@clear
 	@rm -rf ./testing
@@ -102,6 +112,32 @@ stats: build
 	@cp -R ./files ./testing
 	@cp ./release/steamquery_$(BUILD_OS)_$(BUILD_ARCH)/steamquery ./testing
 	@cd ./testing && ./steamquery -c "./files/config.dev.json" -z -d -du
+
+# DO NOT CHANGE.
+env: build
+	@clear
+	@rm -rf ./testing
+	@mkdir ./testing
+	@mkdir ./testing/files
+	@cp -R ./files ./testing
+	@cp docker.env ./testing/docker.env
+	@cp ./release/steamquery_$(BUILD_OS)_$(BUILD_ARCH)/steamquery ./testing
+	@cd ./testing && ./steamquery -c "./files/config.dev.json" -e -efile="docker.env" -d -du
+
+# DO NOT CHANGE.
+docker-up:
+	@clear
+	@echo "Checking for docker.env file..."
+	@[ -f ./docker.env ] && echo "Found docker.env file, proceeding..." || echo "ERROR: missing docker.env file. Please create a docker.env file and edit it" && exit 0
+	@export STEAMQUERY_GIT_COMMIT=${shell git rev-parse HEAD} && docker compose --env-file=docker.env up --build -d
+	@echo ""
+	@echo "Please use 'make docker-down' to shutdown the app and containers."
+
+# DO NOT CHANGE.
+docker-down:
+	@echo "This command will NOT delete Docker images or volumes (data will be persistent)."
+	@echo "If you need functionality to remove images and volumes please use the Docker GUI / CLI if available."
+	@export STEAMQUERY_GIT_COMMIT=${shell git rev-parse HEAD} && docker compose --env-file=docker.env down
 
 # DO NOT CHANGE.
 clean:

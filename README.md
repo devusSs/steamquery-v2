@@ -1,7 +1,5 @@
 # SteamQuery v2 by devusSs
 
-![steam logo](./docs/steamlogo.png)
-
 ## Disclaimer
 
 I do not own any of the rights on potential items / skins / pictures / names used in or outside of this program. Every right goes to their respective owner.<br/>
@@ -91,6 +89,7 @@ If you ever need more configuration options simply set them via flags:
 -b  to enable and run beta features
 -w  to run the app in watchdog mode (automatic rerun after specified interval)
 -z  to run the app in statistics analysis mode (compares prices and creates chart)
+-e  to use env variables instead of a config.json or similar file
 ```
 
 ## Why does this program need my Steam API key and my SteamID64?
@@ -117,6 +116,19 @@ Postgres will be needed to store and read statistics to generate a price history
 ## Why do I need to run the program manually?
 
 You do not! Simply use the `-w` flag on program launch and specify watchdog details (see above) in the config.<br/>
+
+## Can I run the app via Docker?
+
+Of course! Simply run `make docker-up` in the project's directory.<br/>
+Note: you may need to change the `Dockerfile` to respect your `gcloud.json` file path.<br/>
+
+Please make sure you have a proper `docker.env` file setup.<br/>
+You can find an example `docker.env` file [here](./docker.example.env).<br/>
+
+Please note: running the app via Docker will automatically run it in `watchdog (-w flag)` mode.
+
+You may also run the app without docker but still using env variables.<br/>
+Please take note that you will need to setup a functonional [Postgres](https://www.postgresql.org/) database yourself and set `POSTGRES_HOST` manually.
 
 ## Problem Solving
 

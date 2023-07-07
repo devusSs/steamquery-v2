@@ -8,6 +8,7 @@ require (
 	github.com/fatih/color v1.15.0
 	github.com/go-echarts/go-echarts/v2 v2.2.6
 	github.com/google/uuid v1.3.0
+	github.com/joho/godotenv v1.5.1
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/rhysd/go-github-selfupdate v1.2.3
 	google.golang.org/api v0.130.0

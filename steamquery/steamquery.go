@@ -39,6 +39,12 @@ func main() {
 	betaFeatures := flag.Bool("b", false, "enables beta features, not recommended")
 	watchDog := flag.Bool("w", false, "enables watchdog mode with specified interval")
 	analysisFlag := flag.Bool("z", false, "performs data analysis for prices and exits")
+	envFlag := flag.Bool("e", false, "uses env instead of config file, useful for docker")
+	envFile := flag.String(
+		"efile",
+		"",
+		"path for env file if desired, leave blank for raw env variables",
+	)
 	flag.Parse()
 
 	alreadyRunning, err := system.CheckAlreadyRunning(*watchDog, *analysisFlag)
@@ -86,6 +92,8 @@ func main() {
 		}
 	}
 
+	logging.LogDebug(fmt.Sprintf("INIT TIME (SYSTEM): %v", time.Now().Local()))
+
 	if *analysisFlag {
 		cfg, err := config.LoadConfig(*cfgPathFlag)
 		if err != nil {
@@ -120,9 +128,18 @@ func main() {
 		logging.LogWarning("Skipped update check because of -du flag")
 	}
 
-	cfg, err := config.LoadConfig(*cfgPathFlag)
-	if err != nil {
-		logging.LogFatal(err.Error())
+	var cfg *config.Config
+
+	if *envFlag {
+		cfg, err = config.LoadConfigFromEnv(*envFile)
+		if err != nil {
+			logging.LogFatal(err.Error())
+		}
+	} else {
+		cfg, err = config.LoadConfig(*cfgPathFlag)
+		if err != nil {
+			logging.LogFatal(err.Error())
+		}
 	}
 
 	if err := cfg.CheckConfig(*watchDog); err != nil {
@@ -217,11 +234,7 @@ func main() {
 
 			mailData := utils.EmailData{}
 			mailData.Subject = "steamquery-v2 run failed"
-			mailData.Data = fmt.Sprintf(
-				"Your last steamquery-v2 run failed.<br>Error: %s<br>Timestamp: %s",
-				err.Error(),
-				time.Now().Local().String(),
-			)
+			mailData.Data = utils.GenerateFailRunSummary(err)
 			if err := utils.SendMail(&mailData); err != nil {
 				logging.LogFatal(err.Error())
 			}
@@ -237,20 +250,14 @@ func main() {
 		if priceDifference < (maxPriceDifference * -1) {
 			mailData := utils.EmailData{}
 			mailData.Subject = "steamquery-v2 price drop alert"
-			mailData.Data = fmt.Sprintf(
-				"Since your last steamquery-v2 run prices dropped a lot.<br>Drop value: %.2f€<br>Timestamp: %s",
-				priceDifference,
-				time.Now().Local().String(),
-			)
+			mailData.Data = utils.GeneratePriceDropWarning(priceDifference)
 			if err := utils.SendMail(&mailData); err != nil {
 				logging.LogFatal(err.Error())
 			}
 		} else {
 			mailData := utils.EmailData{}
 			mailData.Subject = "steamquery-v2 run summary"
-			mailData.Data = fmt.Sprintf(
-				"Your last steamquery-v2 run summary:<br>Price difference: %.2f€<br>Timestamp: %s",
-				priceDifference, time.Now().Local().String())
+			mailData.Data = utils.GenerateRunSummary(priceDifference)
 			if err := utils.SendMail(&mailData); err != nil {
 				logging.LogFatal(err.Error())
 			}
@@ -282,11 +289,7 @@ func main() {
 
 							mailData := utils.EmailData{}
 							mailData.Subject = "steamquery-v2 run failed"
-							mailData.Data = fmt.Sprintf(
-								"Your last steamquery-v2 run failed.<br>Error: %s<br>Timestamp: %s",
-								err.Error(),
-								time.Now().Local().String(),
-							)
+							mailData.Data = utils.GenerateFailRunSummary(err)
 							if err := utils.SendMail(&mailData); err != nil {
 								logging.LogFatal(err.Error())
 							}
@@ -295,20 +298,14 @@ func main() {
 						if priceDifference < (maxPriceDifference * -1) {
 							mailData := utils.EmailData{}
 							mailData.Subject = "steamquery-v2 price drop alert"
-							mailData.Data = fmt.Sprintf(
-								"Since your last steamquery-v2 run prices dropped a lot.<br>Drop value: %.2f€<br>Timestamp: %s",
-								priceDifference,
-								time.Now().Local().String(),
-							)
+							mailData.Data = utils.GeneratePriceDropWarning(priceDifference)
 							if err := utils.SendMail(&mailData); err != nil {
 								logging.LogFatal(err.Error())
 							}
 						} else {
 							mailData := utils.EmailData{}
 							mailData.Subject = "steamquery-v2 run summary"
-							mailData.Data = fmt.Sprintf(
-								"Your last steamquery-v2 run summary:<br>Price difference: %.2f€<br>Timestamp: %s",
-								priceDifference, time.Now().Local().String())
+							mailData.Data = utils.GenerateRunSummary(priceDifference)
 							if err := utils.SendMail(&mailData); err != nil {
 								logging.LogFatal(err.Error())
 							}

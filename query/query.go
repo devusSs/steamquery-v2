@@ -312,7 +312,14 @@ func getLastUpdatedCellValue() (string, error) {
 
 // Function to compare the last updated cell to current time and exit if less than 5 minutes ago.
 func compareLastUpdatedCell(lastUpdated string) error {
-	timeObject, err := time.Parse("2006-01-02 15:04:05 MST", lastUpdated)
+	lastUpdated = strings.Replace(lastUpdated, " CEST", "", 1)
+
+	location, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		return err
+	}
+
+	timeObject, err := time.ParseInLocation("2006-01-02 15:04:05", lastUpdated, location)
 	if err != nil {
 		return err
 	}
@@ -324,8 +331,15 @@ func compareLastUpdatedCell(lastUpdated string) error {
 
 	systemTimeCEST := time.Now().Local().In(systemTimeCESTLoc)
 
+	logging.LogDebug(fmt.Sprintf("LAST UPDATED: %s", lastUpdated))
+	logging.LogDebug(fmt.Sprintf("SYSTEM TIME CEST: %s", systemTimeCEST))
+
 	if systemTimeCEST.Sub(timeObject) < 3*time.Minute {
+		logging.LogDebug(fmt.Sprintf("TIME DIFF: %v", systemTimeCEST.Sub(timeObject)))
+
 		leftOverTime := time.Until(timeObject.Add(3 * time.Minute)).Seconds()
+
+		logging.LogDebug(fmt.Sprintf("LEFTOVER TIME: %.2f second(s)", leftOverTime))
 
 		return fmt.Errorf(
 			"last run has been less than 3 minutes ago, please wait %.2f second(s)",
@@ -854,6 +868,7 @@ func getLastErrorTimestamp() (time.Time, error) {
 
 	// Error cell will be empty on first run, handle this event.
 	if len(values.Values) == 0 {
+		logging.LogSuccess("First run, no error timestamp, proceeding")
 		return time.Time{}, nil
 	}
 
@@ -867,6 +882,7 @@ func getLastErrorTimestamp() (time.Time, error) {
 		values = strings.Replace(values, "]", "", 1)
 
 		if values == "No error occured." {
+			logging.LogSuccess("No error occured on last run, proceeding")
 			return time.Time{}, nil
 		}
 
@@ -889,6 +905,8 @@ func getLastErrorTimestamp() (time.Time, error) {
 
 // Helper function which compares last error timestamp to current time.
 func compareLastErrorTimestamp(errorTS time.Time) error {
+	logging.LogDebug(fmt.Sprintf("ERROR TS: %v", errorTS))
+
 	systemTimeCESTLoc, err := time.LoadLocation("Europe/Berlin")
 	if err != nil {
 		return err

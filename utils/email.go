@@ -3,9 +3,11 @@ package utils
 import (
 	"bytes"
 	"embed"
+	"fmt"
 	"net/mail"
 	"path/filepath"
 	"text/template"
+	"time"
 
 	"gopkg.in/gomail.v2"
 )
@@ -79,4 +81,26 @@ func parseTemplateDir() (*template.Template, error) {
 	}
 
 	return tmpl, nil
+}
+
+func GeneratePriceDropWarning(priceDifference float64) string {
+	return fmt.Sprintf(
+		"Since your last steamquery-v2 run prices dropped a lot.<br>Drop value: %.2f€<br>Timestamp: %s",
+		priceDifference,
+		time.Now().Local().String(),
+	)
+}
+
+func GenerateRunSummary(priceDifference float64) string {
+	return fmt.Sprintf(
+		"Your last steamquery-v2 run summary:<br>Price difference: %.2f€<br>Timestamp: %s",
+		priceDifference, time.Now().Local().String())
+}
+
+func GenerateFailRunSummary(err error) string {
+	return fmt.Sprintf(
+		"Your last steamquery-v2 run failed.<br>Error: %s<br>Timestamp: %s",
+		err.Error(),
+		time.Now().Local().String(),
+	)
 }

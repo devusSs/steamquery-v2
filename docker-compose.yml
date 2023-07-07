@@ -1,0 +1,68 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    container_name: "steamquery-v2-postgres"
+    ports:
+      - 127.0.0.1:${POSTGRES_PORT}:${POSTGRES_PORT}
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - TZ=Europe/Berlin
+    networks:
+      - fullstack
+    volumes:
+      - database_postgres:/var/lib/postgresql/data
+
+  steamquery:
+    build:
+      context: .
+      args:
+        BUILD_VERSION: ${STEAMQUERY_BUILD_VERSION}
+        BUILD_MODE: ${STEAMQUERY_BUILD_MODE}
+        GIT_COMMIT: ${STEAMQUERY_GIT_COMMIT}
+    restart: unless-stopped
+    container_name: "steamquery-v2-app"
+    environment:
+      TZ: Europe/Berlin
+      ITEM_COLUMN_LETTER: ${ITEM_COLUMN_LETTER}
+      ITEM_START_NUMBER: ${ITEM_START_NUMBER}
+      ITEM_END_NUMBER: ${ITEM_END_NUMBER}
+      ORG_LAST_UPDATED: ${ORG_LAST_UPDATED}
+      ORG_ERROR_CELL: ${ORG_ERROR_CELL}
+      ORG_TOTAL_CELL: ${ORG_TOTAL_CELL}
+      ORG_DIFF_CELL: ${ORG_DIFF_CELL}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      RETRY_INTERVAL: ${RETRY_INTERVAL}
+      STEAM_RETRY_INTERVAL: ${STEAM_RETRY_INTERVAL}
+      MAX_PRICE_DROP: ${MAX_PRICE_DROP}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM: ${SMTP_FROM}
+      SMTP_TO: ${SMTP_TO}
+      PRICE_COLUMN: ${PRICE_COLUMN}
+      PRICE_TOTAL_COLUMN: ${PRICE_TOTAL_COLUMN}
+      AMOUNT_COLUMN: ${AMOUNT_COLUMN}
+      SPREADSHEET_ID: ${SPREADSHEET_ID}
+      STEAM_API_KEY: ${STEAM_API_KEY}
+      STEAM_USER_ID_64: ${STEAM_USER_ID_64}
+    networks:
+      - fullstack
+    depends_on:
+      - postgres
+
+volumes:
+  database_postgres:
+
+networks:
+  fullstack:
+    driver: bridge

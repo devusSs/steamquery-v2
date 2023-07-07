@@ -1,4 +1,5 @@
 config.dev.json
+docker.env
 gcloud.json
 cosign.key
 
