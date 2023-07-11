@@ -34,16 +34,12 @@ endif
 build:
 	@[ "${STEAMQUERY_BUILD_VERSION}" ] || ( echo "STEAMQUERY_BUILD_VERSION is not set"; exit 1 )
 	@[ "${STEAMQUERY_BUILD_MODE}" ] || ( echo "STEAMQUERY_BUILD_MODE is not set"; exit 1 )
-	@echo "Building app for Windows (AMD64), Linux (AMD64) & MacOS (ARM64)..."
+	@echo "Cross-compiling app for Windows (AMD64), Linux (AMD64) & MacOS (ARM64)..."
 	@go mod tidy
-	@CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -v -trimpath -ldflags="-X 'github.com/devusSs/steamquery-v2/updater.BuildVersion=$(BUILD_VERSION)' -X 'github.com/devusSs/steamquery-v2/updater.BuildDate=${shell date}' -X 'github.com/devusSs/steamquery-v2/updater.BuildMode=$(BUILD_MODE)' -X 'github.com/devusSs/steamquery-v2/updater.BuildGitCommit=${shell git rev-parse HEAD}'" -o release/steamquery_windows_amd64/ ./...
-	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -trimpath -ldflags="-X 'github.com/devusSs/steamquery-v2/updater.BuildVersion=$(BUILD_VERSION)' -X 'github.com/devusSs/steamquery-v2/updater.BuildDate=${shell date}' -X 'github.com/devusSs/steamquery-v2/updater.BuildMode=$(BUILD_MODE)' -X 'github.com/devusSs/steamquery-v2/updater.BuildGitCommit=${shell git rev-parse HEAD}'" -o release/steamquery_linux_amd64/ ./...
-	@CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -v -trimpath -ldflags="-X 'github.com/devusSs/steamquery-v2/updater.BuildVersion=$(BUILD_VERSION)' -X 'github.com/devusSs/steamquery-v2/updater.BuildDate=${shell date}' -X 'github.com/devusSs/steamquery-v2/updater.BuildMode=$(BUILD_MODE)' -X 'github.com/devusSs/steamquery-v2/updater.BuildGitCommit=${shell git rev-parse HEAD}'" -o release/steamquery_darwin_arm64/ ./...
+	@GOOS=windows GOARCH=amd64 go build -v -trimpath -ldflags="-s -w -X 'github.com/devusSs/steamquery-v2/updater.BuildVersion=$(BUILD_VERSION)' -X 'github.com/devusSs/steamquery-v2/updater.BuildDate=${shell date}' -X 'github.com/devusSs/steamquery-v2/updater.BuildMode=$(BUILD_MODE)' -X 'github.com/devusSs/steamquery-v2/updater.BuildGitCommit=${shell git rev-parse HEAD}'" -o release/steamquery_windows_amd64/ ./...
+	@GOOS=linux GOARCH=amd64 go build -v -trimpath -ldflags="-s -w -X 'github.com/devusSs/steamquery-v2/updater.BuildVersion=$(BUILD_VERSION)' -X 'github.com/devusSs/steamquery-v2/updater.BuildDate=${shell date}' -X 'github.com/devusSs/steamquery-v2/updater.BuildMode=$(BUILD_MODE)' -X 'github.com/devusSs/steamquery-v2/updater.BuildGitCommit=${shell git rev-parse HEAD}'" -o release/steamquery_linux_amd64/ ./...
+	@GOOS=darwin GOARCH=arm64 go build -v -trimpath -ldflags="-s -w -X 'github.com/devusSs/steamquery-v2/updater.BuildVersion=$(BUILD_VERSION)' -X 'github.com/devusSs/steamquery-v2/updater.BuildDate=${shell date}' -X 'github.com/devusSs/steamquery-v2/updater.BuildMode=$(BUILD_MODE)' -X 'github.com/devusSs/steamquery-v2/updater.BuildGitCommit=${shell git rev-parse HEAD}'" -o release/steamquery_darwin_arm64/ ./...
 	@echo "Done building app"
-
-# DO NOT CHANGE.
-test:
-	@go test ./...
 
 # DO NOT CHANGE.
 dev: build
@@ -147,3 +143,4 @@ clean:
 	@rm -rf ./release
 	@rm -rf ./testing
 	@rm -rf ./dist
+	@rm -rf ./tmp

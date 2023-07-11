@@ -18,10 +18,13 @@ import (
 	"github.com/devusSs/steamquery-v2/logging"
 	"github.com/devusSs/steamquery-v2/statistics/database"
 	"github.com/devusSs/steamquery-v2/statistics/database/postgres"
+	"github.com/devusSs/steamquery-v2/statistics/database/sqlite"
 )
 
 const (
 	analysisDir = "stats"
+	DBPostgres  = "postgres"
+	DBSQLite    = "sqlite"
 )
 
 var (
@@ -44,25 +47,42 @@ var (
 	)
 )
 
-func SetupStatistics(cfg *config.Postgres, logsDir string) error {
-	svc, err := postgres.NewPostgresConnection(cfg, logsDir)
-	if err != nil {
+func SetupStatistics(cfg *config.Postgres, logsDir, dbType string) error {
+	var svc database.Service
+	var err error
+
+	switch dbType {
+	case DBPostgres:
+		logging.LogDebug("Setting up Postgres database")
+		svc, err = postgres.NewPostgresConnection(cfg, logsDir)
+		if err != nil {
+			return err
+		}
+		logging.LogSuccess("Done setting up Postgres database")
+	case DBSQLite:
+		logging.LogDebug("Setting up SQLite database")
+		svc, err = sqlite.NewSqliteConnection(cfg, logsDir)
+		if err != nil {
+			return err
+		}
+		logging.LogSuccess("Done setting up SQLite database")
+	default:
+		return fmt.Errorf("unsupported db type: %s, want %s or %s", dbType, DBPostgres, DBSQLite)
+	}
+
+	if err = svc.TestConnection(); err != nil {
 		return err
 	}
 
-	if err := svc.TestConnection(); err != nil {
+	if err = svc.VerifyVersion(); err != nil {
 		return err
 	}
 
-	if err := svc.VerifyVersion(); err != nil {
+	if err = svc.Migrate(); err != nil {
 		return err
 	}
 
-	if err := svc.Migrate(); err != nil {
-		return err
-	}
-
-	if err := svc.DeleteOldValues(); err != nil {
+	if err = svc.DeleteOldValues(); err != nil {
 		return err
 	}
 
@@ -88,12 +108,27 @@ func AddStatistics(model *database.SteamQueryV2Values) error {
 	return service.AddValues(model)
 }
 
-func StartStatsAnalysis(cfg *config.Postgres, logsDir string) {
-	if err := SetupStatistics(cfg, logsDir); err != nil {
-		logging.LogError(err.Error())
-		if err := exitStats(); err != nil {
-			logging.LogFatal(err.Error())
+// TODO: add warning for user if data is inconsistent (like program only being run 3 times a week)
+func StartStatsAnalysis(cfg *config.Postgres, logsDir, dbType string) {
+	switch dbType {
+	case DBPostgres:
+		if err := SetupStatistics(cfg, logsDir, DBPostgres); err != nil {
+			logging.LogError(err.Error())
+			if err := exitStats(); err != nil {
+				logging.LogFatal(err.Error())
+			}
+			return
 		}
+	case DBSQLite:
+		if err := SetupStatistics(cfg, logsDir, DBSQLite); err != nil {
+			logging.LogError(err.Error())
+			if err := exitStats(); err != nil {
+				logging.LogFatal(err.Error())
+			}
+			return
+		}
+	default:
+		fmt.Printf("Unsupported db type: %s, want %s or %s", dbType, DBPostgres, DBSQLite)
 		return
 	}
 
@@ -323,6 +358,18 @@ func performAnalysis(itemNames []string, dateRange, logsDir string) error {
 
 	if len(results) == 0 {
 		return errors.New("no results found on database")
+	}
+
+	database.SortByDate(results)
+
+	startDate := results[0].Created
+	endDate := results[len(results)-1].Created
+	totalDays := int(endDate.Sub(startDate).Hours() / 24)
+
+	if totalDays != len(results)-1 {
+		logging.LogWarning(
+			"Data is inconsistent. There are missing entries, stats may be inaccurate",
+		)
 	}
 
 	logging.LogInfo("Generating and writing chart, please wait")

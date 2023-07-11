@@ -104,7 +104,15 @@ func main() {
 			logging.LogFatal(err.Error())
 		}
 
-		statistics.StartStatsAnalysis(&cfg.WatchDog.Postgres, *logDirFlag)
+		if *watchDog {
+			statistics.StartStatsAnalysis(
+				&cfg.WatchDog.Postgres,
+				*logDirFlag,
+				statistics.DBPostgres,
+			)
+		} else {
+			statistics.StartStatsAnalysis(&cfg.WatchDog.Postgres, *logDirFlag, statistics.DBSQLite)
+		}
 
 		return
 	}
@@ -172,15 +180,21 @@ func main() {
 		*betaFeatures,
 	)
 
-	if *watchDog {
-		logging.LogInfo("Running statistics setup, please wait")
+	logging.LogInfo("Running statistics setup, please wait")
 
-		if err := statistics.SetupStatistics(&cfg.WatchDog.Postgres, *logDirFlag); err != nil {
+	if *watchDog {
+		if err := statistics.SetupStatistics(&cfg.WatchDog.Postgres, *logDirFlag, statistics.DBPostgres); err != nil {
 			logging.LogFatal(err.Error())
 		}
+	} else {
+		if err := statistics.SetupStatistics(&cfg.WatchDog.Postgres, *logDirFlag, statistics.DBSQLite); err != nil {
+			logging.LogFatal(err.Error())
+		}
+	}
 
-		logging.LogSuccess("Done with statistics setup")
+	logging.LogSuccess("Done with statistics setup")
 
+	if *watchDog {
 		maxPriceDifference = cfg.WatchDog.MaxPriceDrop
 
 		logging.LogWarning("Running app in watchdog mode")
@@ -210,7 +224,7 @@ func main() {
 		stopRerun := make(chan bool)
 
 		// Run the app once and the on every tick.
-		priceDifference, err := query.RunQuery(cfg.WatchDog.SteamRetryInterval, *watchDog)
+		priceDifference, err := query.RunQuery(cfg.WatchDog.SteamRetryInterval)
 		if err != nil {
 			if strings.Contains(err.Error(), "last run has been less than 3 minutes ago") {
 				logging.LogFatal(err.Error())
@@ -280,7 +294,6 @@ func main() {
 					if !query.QueryRunning {
 						priceDifference, err := query.RunQuery(
 							cfg.WatchDog.SteamRetryInterval,
-							*watchDog,
 						)
 						if err != nil {
 							if err := query.WriteErrorCell(fmt.Errorf("%s (TS: %s)", err.Error(), time.Now().Local().Format("2006-01-02 15:04:05 CEST"))); err != nil {
@@ -334,7 +347,7 @@ func main() {
 			logging.LogFatal(err.Error())
 		}
 	} else {
-		if _, err := query.RunQuery(cfg.WatchDog.SteamRetryInterval, *watchDog); err != nil {
+		if _, err := query.RunQuery(cfg.WatchDog.SteamRetryInterval); err != nil {
 			if strings.Contains(err.Error(), "last run has been less than 3 minutes ago") {
 				logging.LogFatal(err.Error())
 			}

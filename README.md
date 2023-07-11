@@ -88,7 +88,7 @@ If you ever need more configuration options simply set them via flags:
 -sc to skip checks regarding last updated and error cell on Google Sheets
 -b  to enable and run beta features
 -w  to run the app in watchdog mode (automatic rerun after specified interval)
--z  to run the app in statistics analysis mode (compares prices and creates chart)
+-z  to run the app in statistics analysis mode (compares prices and creates chart), needs -w specified for Postgres usage
 -e  to use env variables instead of a config.json or similar file
 ```
 
@@ -128,7 +128,7 @@ You can find an example `docker.env` file [here](./docker.example.env).<br/>
 Please note: running the app via Docker will automatically run it in `watchdog (-w flag)` mode.
 
 You may also run the app without docker but still using env variables.<br/>
-Please take note that you will need to setup a functonional [Postgres](https://www.postgresql.org/) database yourself and set `POSTGRES_HOST` manually.
+Please take note that you will, depending on your usage, need to setup a functonional [Postgres](https://www.postgresql.org/) or [SQLite3](https://www.sqlite.org/index.html) database yourself and set `POSTGRES_HOST` (not needed for SQLite3) manually.
 
 ## Problem Solving
 

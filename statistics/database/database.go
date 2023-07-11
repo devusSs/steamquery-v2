@@ -1,7 +1,10 @@
 package database
 
 import (
+	"sort"
 	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/google/uuid"
 )
@@ -20,9 +23,20 @@ type Service interface {
 }
 
 type SteamQueryV2Values struct {
-	ID uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	ID uuid.UUID `gorm:"type:uuid;primary_key;"`
 
 	ItemName string
 	Price    float64
 	Created  time.Time
+}
+
+func (s *SteamQueryV2Values) BeforeCreate(tx *gorm.DB) (err error) {
+	s.ID = uuid.New()
+	return
+}
+
+func SortByDate(data []*SteamQueryV2Values) {
+	sort.Slice(data, func(i, j int) bool {
+		return data[i].Created.Before(data[j].Created)
+	})
 }
