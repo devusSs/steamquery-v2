@@ -78,12 +78,6 @@ func LogDebug(message string) {
 	if logLevel != "release" {
 		consoleLogger.Printf("%s %s\n", DebugSign, message)
 	}
-	_, err := appLogger.Write(
-		[]byte(fmt.Sprintf("%s - %s %s\n", time.Now().String(), InfSignNoColour, message)),
-	)
-	if err != nil {
-		log.Println(err)
-	}
 }
 
 func LogInfo(message string) {
