@@ -252,6 +252,7 @@ func StartStatsAnalysis(cfg *config.Postgres, logsDir, dbType string) {
 }
 
 func AnalyseVolumes(wg *sync.WaitGroup, endTime time.Time, postRunMap map[string]int) {
+	// TODO: add option to set this
 	logging.LogInfo(
 		fmt.Sprintf("Starting volumes analysis, using default (%v)", defaultVolumesCheckInterval),
 	)
@@ -286,6 +287,13 @@ func AnalyseVolumes(wg *sync.WaitGroup, endTime time.Time, postRunMap map[string
 		}
 
 		difference := preRunVolume - postRunVolume
+
+		if preRunVolume == 0 {
+			logging.LogWarning(
+				fmt.Sprintf("item %s has volume 0 pre run, skipping", value.ItemName),
+			)
+			continue
+		}
 
 		diffPerc := float64(difference/preRunVolume) * 100
 
