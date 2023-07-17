@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
@@ -22,9 +23,12 @@ import (
 )
 
 const (
-	analysisDir = "stats"
-	DBPostgres  = "postgres"
-	DBSQLite    = "sqlite"
+	analysisDir                 = "stats"
+	DBPostgres                  = "postgres"
+	DBSQLite                    = "sqlite"
+	defaultVolumesCheckInterval = 24 * time.Hour
+	// Half or doubled, subject to change.
+	differencePercentMax = 100
 )
 
 var (
@@ -108,7 +112,6 @@ func AddStatistics(model *database.SteamQueryV2Values) error {
 	return service.AddValues(model)
 }
 
-// TODO: add warning for user if data is inconsistent (like program only being run 3 times a week)
 func StartStatsAnalysis(cfg *config.Postgres, logsDir, dbType string) {
 	switch dbType {
 	case DBPostgres:
@@ -246,6 +249,84 @@ func StartStatsAnalysis(cfg *config.Postgres, logsDir, dbType string) {
 	if err := exitStats(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func AnalyseVolumes(wg *sync.WaitGroup, endTime time.Time, postRunMap map[string]int) {
+	logging.LogInfo(
+		fmt.Sprintf("Starting volumes analysis, using default (%v)", defaultVolumesCheckInterval),
+	)
+
+	startTime := endTime.Add(-defaultVolumesCheckInterval)
+
+	preRunValues, err := service.GetValuesByDate(startTime, endTime)
+	if err != nil {
+		logging.LogError(fmt.Sprintf("Error running volumes analysis: %s", err.Error()))
+		wg.Done()
+		return
+	}
+
+	if len(preRunValues) == 0 {
+		logging.LogWarning("No pre run values (no db yet), skipping volumes analysis")
+		wg.Done()
+		return
+	}
+
+	for _, value := range preRunValues {
+		preRunVolume := value.Volume
+		postRunVolume, ok := postRunMap[value.ItemName]
+		if !ok {
+			logging.LogError(
+				fmt.Sprintf(
+					"Error running volumes analysis: %s not found on post run map",
+					value.ItemName,
+				),
+			)
+			wg.Done()
+			return
+		}
+
+		difference := preRunVolume - postRunVolume
+
+		diffPerc := float64(difference/preRunVolume) * 100
+
+		logging.LogDebug(
+			fmt.Sprintf(
+				"%s difference in volume: %d (post: %d , pre: %d, perc: %.2f)",
+				value.ItemName,
+				difference,
+				postRunVolume,
+				preRunVolume,
+				diffPerc,
+			),
+		)
+
+		caseIncrease := diffPerc > differencePercentMax
+		caseDecrease := diffPerc < -differencePercentMax
+
+		if caseIncrease {
+			logging.LogWarning(
+				fmt.Sprintf(
+					"Item %s volume increased by %.2f percent, prices might drop soon",
+					value.ItemName,
+					diffPerc,
+				),
+			)
+		}
+
+		if caseDecrease {
+			logging.LogWarning(
+				fmt.Sprintf(
+					"Item %s volume decreased by %.2f percent, prices might increase soon",
+					value.ItemName,
+					diffPerc,
+				),
+			)
+		}
+	}
+
+	logging.LogSuccess("Done with volumes analysis")
+
+	wg.Done()
 }
 
 func CloseStatistics() error {

@@ -27,6 +27,7 @@ type SteamQueryV2Values struct {
 
 	ItemName string
 	Price    float64
+	Volume   int
 	Created  time.Time
 }
 

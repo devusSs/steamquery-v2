@@ -154,18 +154,21 @@ func RunQuery(steamRetryInterval int) (float64, error) {
 			return 0, err
 		}
 
-		// TODO: find way to write this map to sheets without dismissing cell range
 		logging.LogDebug(fmt.Sprintf("TOTAL SHEETS MAP: %v", totalSheetsMap))
 
 		return 0, nil
 	}
 
-	priceMap, err := getItemMarketValues(itemList)
+	priceMap, marketAmountMap, err := getItemMarketValues(itemList)
 	if err != nil {
 		return 0, err
 	}
 
-	wg := sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
+
+	wg.Add(1)
+	go statistics.AnalyseVolumes(wg, time.Now(), marketAmountMap)
+
 	go func() {
 		for item, price := range priceMap {
 			wg.Add(1)
@@ -177,7 +180,7 @@ func RunQuery(steamRetryInterval int) (float64, error) {
 				logging.LogError(fmt.Sprintf("STATS ERROR: %s", err.Error()))
 			}
 
-			if err := statistics.AddStatistics(&database.SteamQueryV2Values{ItemName: item, Price: convertedPrice, Created: time.Now()}); err != nil {
+			if err := statistics.AddStatistics(&database.SteamQueryV2Values{ItemName: item, Price: convertedPrice, Volume: marketAmountMap[item], Created: time.Now()}); err != nil {
 				logging.LogError(fmt.Sprintf("STATS ERROR: %s", err.Error()))
 			}
 			wg.Done()
@@ -386,7 +389,7 @@ func getItemNamesFromSheets() (map[string]int, error) {
 }
 
 // Function gets the market price for each item in item map.
-func getItemMarketValues(items map[string]int) (map[string]string, error) {
+func getItemMarketValues(items map[string]int) (map[string]string, map[string]int, error) {
 	logging.LogInfo(
 		"Fetching prices now, this might take a moment. The program WILL print something once it is done",
 	)
@@ -395,6 +398,7 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 
 	httpClient := http.Client{Timeout: 3 * time.Second}
 	priceMap := make(map[string]string)
+	volumeMap := make(map[string]int)
 	getCount := 0
 	itemsFetched := 0
 	sleepCount := 0
@@ -441,14 +445,14 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 
 		req, err := http.NewRequest(http.MethodGet, u, nil)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		req.Header.Set("User-Agent", system.GetUserAgentHeaderFromOS())
 
 		res, err := httpClient.Do(req)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		defer res.Body.Close()
 
@@ -473,7 +477,7 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 				continue
 			}
 
-			return nil, fmt.Errorf(
+			return nil, nil, fmt.Errorf(
 				"unwanted Steam response: %s (code: %d)",
 				res.Status,
 				res.StatusCode,
@@ -482,13 +486,13 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 
 		body, err := io.ReadAll(res.Body)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		var itemMarketResponse types.SteamItemResponse
 
 		if err := json.Unmarshal(body, &itemMarketResponse); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		// Replace price with 0 when item has no active listing on Steam market.
@@ -502,6 +506,13 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 		}
 
 		priceMap[item] = strings.ReplaceAll(itemMarketResponse.LowestPrice, "-", "")
+
+		volumeConv, err := strconv.Atoi(strings.Replace(itemMarketResponse.Volume, ",", "", 1))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		volumeMap[item] = volumeConv
 
 		getCount++
 
@@ -520,7 +531,7 @@ func getItemMarketValues(items map[string]int) (map[string]string, error) {
 
 	logging.LogSuccess(fmt.Sprintf("Successfully fetched %d item price(s)", itemsFetched))
 
-	return priceMap, nil
+	return priceMap, volumeMap, nil
 }
 
 // Function writes the lowest market price to the corresponding price cell.
