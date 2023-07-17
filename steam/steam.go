@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/devusSs/steamquery-v2/logging"
+	"github.com/devusSs/steamquery-v2/system"
 	"github.com/devusSs/steamquery-v2/types"
 )
 
@@ -25,6 +26,8 @@ const (
 
 // Actual check on the Steam API for status of CSGO servers.
 func IsSteamCSGOAPIUp(apiKey string) (bool, error) {
+	startTime := time.Now()
+
 	logging.LogInfo("Fetching Steam API status, please wait")
 
 	res, err := http.Get(fmt.Sprintf("%s%s", statusAPIURL, apiKey))
@@ -41,9 +44,16 @@ func IsSteamCSGOAPIUp(apiKey string) (bool, error) {
 		)
 	}
 
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return false, err
+	}
+
+	system.BytesUsed += len(body)
+
 	var resp types.SteamAPIResponse
 
-	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
+	if err := json.Unmarshal(body, &resp); err != nil {
 		return false, err
 	}
 
@@ -70,6 +80,8 @@ func IsSteamCSGOAPIUp(apiKey string) (bool, error) {
 		steamStatusCommunity = steamDown
 	}
 
+	logging.LogDebug(fmt.Sprintf("took %.2f second(s)", time.Since(startTime).Seconds()))
+
 	return steamStatusSessions < 3 && steamStatusCommunity < 3, nil
 }
 
@@ -78,6 +90,8 @@ func GetAndCompareSteamInventory(
 	itemListMap map[string]int,
 	itemAmountMap map[int]int,
 ) (map[string]int, error) {
+	startTime := time.Now()
+
 	steamUp, err := IsSteamCSGOAPIUp(apiKey)
 	if err != nil {
 		return nil, err
@@ -159,10 +173,14 @@ func GetAndCompareSteamInventory(
 
 	logging.LogDebug(fmt.Sprintf("MISSING ITEM MAP: %v", missingAddMap))
 
+	logging.LogDebug(fmt.Sprintf("took %.2f second(s)", time.Since(startTime).Seconds()))
+
 	return missingAddMap, nil
 }
 
 func getSteamInventory(steamID64 uint64) (map[string]int, error) {
+	startTime := time.Now()
+
 	url := fmt.Sprintf("http://steamcommunity.com/inventory/%d/%d/%d", steamID64, 730, 2)
 
 	client := http.Client{}
@@ -193,6 +211,8 @@ func getSteamInventory(steamID64 uint64) (map[string]int, error) {
 		return nil, err
 	}
 
+	system.BytesUsed += len(body)
+
 	var steamReturn types.SteamInventoryReturn
 
 	if err := json.Unmarshal(body, &steamReturn); err != nil {
@@ -206,6 +226,8 @@ func getSteamInventory(steamID64 uint64) (map[string]int, error) {
 			itemCountMap[item.Name]++
 		}
 	}
+
+	logging.LogDebug(fmt.Sprintf("took %.2f second(s)", time.Since(startTime).Seconds()))
 
 	return itemCountMap, nil
 }

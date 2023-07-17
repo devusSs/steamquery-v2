@@ -194,6 +194,8 @@ func main() {
 
 	logging.LogSuccess("Done with statistics setup")
 
+	logging.LogDebug(fmt.Sprintf("init setup took %.2f second(s)", time.Since(startTime).Seconds()))
+
 	if *watchDog {
 		maxPriceDifference = cfg.WatchDog.MaxPriceDrop
 
@@ -324,6 +326,9 @@ func main() {
 							}
 						}
 
+						system.PrintBytesUsed()
+						system.BytesUsed = 0
+
 						system.Clear[runtime.GOOS]()
 						logging.LogSuccess("Query run completed")
 						logging.LogInfo(
@@ -373,6 +378,8 @@ func main() {
 			}
 		}
 	}
+
+	system.PrintBytesUsed()
 
 	logging.LogSuccess("Done, exiting app now")
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"runtime"
@@ -15,6 +16,7 @@ import (
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
 
 	"github.com/devusSs/steamquery-v2/logging"
+	"github.com/devusSs/steamquery-v2/system"
 	"github.com/devusSs/steamquery-v2/types"
 	"github.com/devusSs/steamquery-v2/utils"
 )
@@ -140,10 +142,16 @@ func findLatestReleaseURL() (string, string, string, error) {
 	}
 	defer resp.Body.Close()
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	system.BytesUsed += len(body)
+
 	var release types.GithubRelease
 
-	err = json.NewDecoder(resp.Body).Decode(&release)
-	if err != nil {
+	if err := json.Unmarshal(body, &release); err != nil {
 		return "", "", "", err
 	}
 

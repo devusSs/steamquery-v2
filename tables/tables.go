@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
+	"github.com/devusSs/steamquery-v2/logging"
 	"google.golang.org/api/option"
 	sheets "google.golang.org/api/sheets/v4"
 )
@@ -62,6 +64,8 @@ func (s *SpreadsheetService) WriteMultipleEntriesToTable(
 	inputMap map[int]string,
 	column string,
 ) error {
+	startTime := time.Now()
+
 	var keys []int
 	for key := range inputMap {
 		keys = append(keys, key)
@@ -87,6 +91,8 @@ func (s *SpreadsheetService) WriteMultipleEntriesToTable(
 	_, err := s.service.Spreadsheets.Values.Update(s.spreadsheetID, cellRange, valueRange).
 		ValueInputOption("USER_ENTERED").
 		Do()
+
+	logging.LogDebug(fmt.Sprintf("took %.2f second(s)", time.Since(startTime).Seconds()))
 
 	return err
 }

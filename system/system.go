@@ -20,6 +20,10 @@ import (
 	"github.com/devusSs/steamquery-v2/logging"
 )
 
+var (
+	BytesUsed = 0
+)
+
 var Clear map[string]func()
 
 func InitClearFunc() {
@@ -146,6 +150,23 @@ func RunAnalysisMode(logsDir, cfg, gCloud string) error {
 	)
 
 	return nil
+}
+
+func PrintBytesUsed() {
+	if BytesUsed > 1024 {
+		kbUsed := float64(BytesUsed) / 1024
+
+		if kbUsed > 1024 {
+			mbUsed := kbUsed / 1024
+			logging.LogWarning(fmt.Sprintf("approx megabytes used: %.2f", mbUsed))
+			return
+		}
+
+		logging.LogDebug(fmt.Sprintf("approx kilobytes used: %.2f", kbUsed))
+		return
+	}
+
+	logging.LogDebug(fmt.Sprintf("approx bytes used: %d", BytesUsed))
 }
 
 func readAndCheckErrorFile(logsDir string) error {

@@ -390,6 +390,8 @@ func getItemNamesFromSheets() (map[string]int, error) {
 
 // Function gets the market price for each item in item map.
 func getItemMarketValues(items map[string]int) (map[string]string, map[string]int, error) {
+	startTime := time.Now()
+
 	logging.LogInfo(
 		"Fetching prices now, this might take a moment. The program WILL print something once it is done",
 	)
@@ -489,6 +491,8 @@ func getItemMarketValues(items map[string]int) (map[string]string, map[string]in
 			return nil, nil, err
 		}
 
+		system.BytesUsed += len(body)
+
 		var itemMarketResponse types.SteamItemResponse
 
 		if err := json.Unmarshal(body, &itemMarketResponse); err != nil {
@@ -530,6 +534,8 @@ func getItemMarketValues(items map[string]int) (map[string]string, map[string]in
 	logging.LogDebug(fmt.Sprintf("Item prices post fetch: %v", priceMap))
 
 	logging.LogSuccess(fmt.Sprintf("Successfully fetched %d item price(s)", itemsFetched))
+
+	logging.LogDebug(fmt.Sprintf("took %.2f second(s)", time.Since(startTime).Seconds()))
 
 	return priceMap, volumeMap, nil
 }
