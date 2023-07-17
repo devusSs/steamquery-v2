@@ -92,8 +92,6 @@ func main() {
 		}
 	}
 
-	logging.LogDebug(fmt.Sprintf("INIT TIME (SYSTEM): %v", time.Now().Local()))
-
 	if *analysisFlag {
 		cfg, err := config.LoadConfig(*cfgPathFlag)
 		if err != nil {
