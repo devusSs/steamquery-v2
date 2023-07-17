@@ -50,18 +50,20 @@ func InitLoggers(level string) error {
 
 	appLogger = &lumberjack.Logger{
 		Filename:   fmt.Sprintf("%s/app.log", logsDirectory),
-		MaxSize:    50,
+		MaxSize:    10,
 		MaxBackups: 3,
-		MaxAge:     28,
+		MaxAge:     14,
 		Compress:   true,
+		LocalTime:  true,
 	}
 
 	errorLogger = &lumberjack.Logger{
 		Filename:   fmt.Sprintf("%s/error.log", logsDirectory),
-		MaxSize:    50,
+		MaxSize:    10,
 		MaxBackups: 3,
-		MaxAge:     28,
+		MaxAge:     14,
 		Compress:   true,
+		LocalTime:  true,
 	}
 
 	return nil
