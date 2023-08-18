@@ -11,7 +11,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/rhysd/go-github-selfupdate v1.2.3
-	google.golang.org/api v0.137.0
+	google.golang.org/api v0.138.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gorm.io/driver/postgres v1.5.2
