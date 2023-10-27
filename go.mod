@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
 	github.com/fatih/color v1.15.0
-	github.com/go-echarts/go-echarts/v2 v2.3.1
+	github.com/go-echarts/go-echarts/v2 v2.3.2
 	github.com/google/uuid v1.3.1
 	github.com/joho/godotenv v1.5.1
 	github.com/nightlyone/lockfile v1.0.0
